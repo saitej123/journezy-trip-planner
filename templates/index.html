@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journezy Trip Planner - Your Personal Travel Planner</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Animation Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <!-- Preloader -->
+    <div id="preloader" class="preloader">
+        <div class="loader"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <div class="logo-container">
+                    <img src="/static/images/logo.png" alt="Journezy Logo" class="navbar-logo">
+                    <div class="logo-text-container">
+                        <!-- <span class="logo-text"></span> -->
+                        <!-- <span class="logo-ai"></span> -->
+                    </div>
+                </div>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link btn-logout ms-2" onclick="handleLogout()">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn-primary-outline ms-2" href="#plan">Plan Trip</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="container h-100">
+            <div class="row h-100 align-items-center">
+                <div class="col-lg-6">
+                    <div class="hero-content text-white">
+                        <h1 class="display-3 fw-bold mb-4 hero-title">
+                            Plan Your Dream Trip with Journezy
+                        </h1>
+                        <p class="lead mb-4 hero-subtitle">
+                            Experience personalized travel planning powered by artificial intelligence. Get custom itineraries, 
+                            find the best flights, and discover hidden gems at your destination.
+                        </p>
+                        <div class="hero-cta">
+                            <a href="#plan" class="btn btn-lg btn-light">
+                                <i class="fas fa-plane-departure me-2"></i>
+                                Start Planning
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-stats">
+                        <div class="row g-4 justify-content-center">
+                            <div class="col-lg-4 col-md-6">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-language"></i>
+                                    </div>
+                                    <h3>Multi-Lingual</h3>
+                                    <p>11 Languages Supported</p>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <h3>AI Powered</h3>
+                                    <p>Intelligent Trip Planning</p>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-globe"></i>
+                                    </div>
+                                    <h3>Real-Time</h3>
+                                    <p>Live Travel Data</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Planning Section -->
+    <section id="plan" class="planning-section">
+        <div class="container">
+            <div class="planning-card" data-aos="zoom-in">
+                <h2>Plan Your Perfect Trip</h2>
+                <form id="tripForm" class="trip-form needs-validation" novalidate>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-4">
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="from_city" 
+                                    name="from_city"
+                                    placeholder="From City"
+                                    required
+                                    data-aos="fade-up"
+                                    data-aos-delay="100"
+                                >
+                                <label for="from_city">From City</label>
+                                <div class="invalid-feedback">Please enter departure city</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-4">
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="to_city" 
+                                    name="to_city"
+                                    placeholder="To City"
+                                    required
+                                    data-aos="fade-up"
+                                    data-aos-delay="100"
+                                >
+                                <label for="to_city">To City</label>
+                                <div class="invalid-feedback">Please enter destination city</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Traveler Information Section -->
+                    <div class="traveler-section mb-4" data-aos="fade-up" data-aos-delay="100">
+                        <h4 class="mb-3 text-primary">
+                            <i class="fas fa-users me-2"></i>Traveler Information
+                        </h4>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input 
+                                        type="number" 
+                                        class="form-control" 
+                                        id="adults" 
+                                        name="adults"
+                                        placeholder="Adults"
+                                        min="1"
+                                        max="10"
+                                        value="1"
+                                        required
+                                    >
+                                    <label for="adults">Adults</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input 
+                                        type="number" 
+                                        class="form-control" 
+                                        id="children" 
+                                        name="children"
+                                        placeholder="Children"
+                                        min="0"
+                                        max="10"
+                                        value="0"
+                                    >
+                                    <label for="children">Children</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input 
+                                        type="number" 
+                                        class="form-control" 
+                                        id="seniors" 
+                                        name="seniors"
+                                        placeholder="Seniors"
+                                        min="0"
+                                        max="10"
+                                        value="0"
+                                    >
+                                    <label for="seniors">Seniors (65+)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating">
+                                    <input 
+                                        type="number" 
+                                        class="form-control" 
+                                        id="children_under_5" 
+                                        name="children_under_5"
+                                        placeholder="Under 5"
+                                        min="0"
+                                        max="10"
+                                        value="0"
+                                    >
+                                    <label for="children_under_5">Children Under 5</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="form-floating mb-4">
+                                <select 
+                                    class="form-control" 
+                                    id="language" 
+                                    name="language"
+                                    data-aos="fade-up"
+                                    data-aos-delay="120"
+                                >
+                                    <option value="" disabled selected>Select language</option>
+                                    <option value="en">English</option>
+                                    <option value="hi">Hindi</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="it">Italian</option>
+                                    <option value="pt">Portuguese</option>
+                                    <option value="ja">Japanese</option>
+                                    <option value="ko">Korean</option>
+                                    <option value="zh">Chinese</option>
+                                    <option value="ar">Arabic</option>
+                                </select>
+                                <label for="language">Language</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-floating mb-4">
+                                <select 
+                                    class="form-control" 
+                                    id="currency" 
+                                    name="currency"
+                                    data-aos="fade-up"
+                                    data-aos-delay="140"
+                                >
+                                    <option value="" disabled selected>Select currency</option>
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="INR">INR - Indian Rupee</option>
+                                </select>
+                                <label for="currency">Currency</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-floating mb-4">
+                                <input 
+                                    type="number" 
+                                    class="form-control" 
+                                    id="budget_amount" 
+                                    name="budget_amount"
+                                    placeholder="Overall Budget (optional)"
+                                    min="0"
+                                    step="1"
+                                    data-aos="fade-up"
+                                    data-aos-delay="160"
+                                >
+                                <label for="budget_amount">Overall Budget (optional)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special Options Section -->
+                    <div class="special-options mb-4" data-aos="fade-up" data-aos-delay="120">
+                        <h4 class="mb-3 text-primary">
+                            <i class="fas fa-cog me-2"></i>Special Options
+                        </h4>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="itinerary_first" name="itinerary_first">
+                                    <label class="form-check-label" for="itinerary_first">
+                                        <i class="fas fa-route me-2"></i>Itinerary-First Planning
+                                    </label>
+                                    <small class="form-text text-muted d-block">Prioritize itinerary over flight selection</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="consider_toddler_friendly" name="consider_toddler_friendly">
+                                    <label class="form-check-label" for="consider_toddler_friendly">
+                                        <i class="fas fa-baby me-2"></i>Toddler-Friendly
+                                    </label>
+                                    <small class="form-text text-muted d-block">Include toddler-friendly activities and accommodations</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="consider_senior_friendly" name="consider_senior_friendly">
+                                    <label class="form-check-label" for="consider_senior_friendly">
+                                        <i class="fas fa-wheelchair me-2"></i>Senior-Friendly
+                                    </label>
+                                    <small class="form-text text-muted d-block">Include senior-friendly activities and accommodations</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="safety_check" name="safety_check" checked>
+                                    <label class="form-check-label" for="safety_check">
+                                        <i class="fas fa-shield-alt me-2"></i>Safety Check
+                                    </label>
+                                    <small class="form-text text-muted d-block">Include travel safety information</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-floating mb-4">
+                        <textarea 
+                            class="form-control" 
+                            id="additional_instructions" 
+                            name="additional_instructions"
+                            placeholder="Additional Instructions (Optional)"
+                            style="height: 100px"
+                            data-aos="fade-up"
+                            data-aos-delay="150"
+                        ></textarea>
+                        <label for="additional_instructions">Additional Instructions (Optional)</label>
+                    </div>
+
+                    <!-- Flight Preferences Section -->
+                    <div class="flight-preferences mb-4" data-aos="fade-up" data-aos-delay="130">
+                        <h4 class="mb-3 text-primary">
+                            <i class="fas fa-plane me-2"></i>Flight Preferences
+                        </h4>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="avoid_red_eye" name="avoid_red_eye">
+                                    <label class="form-check-label" for="avoid_red_eye">
+                                        <i class="fas fa-moon me-2"></i>Avoid Red-Eye Flights
+                                    </label>
+                                    <small class="form-text text-muted d-block">Avoid flights departing 10 PM - 6 AM</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="avoid_early_morning" name="avoid_early_morning">
+                                    <label class="form-check-label" for="avoid_early_morning">
+                                        <i class="fas fa-sun me-2"></i>Avoid Early Morning
+                                    </label>
+                                    <small class="form-text text-muted d-block">Avoid flights before 8 AM</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="child_friendly" name="child_friendly">
+                                    <label class="form-check-label" for="child_friendly">
+                                        <i class="fas fa-child me-2"></i>Child-Friendly Times
+                                    </label>
+                                    <small class="form-text text-muted d-block">Prefer mid-day flights (10 AM - 6 PM)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="senior_friendly" name="senior_friendly">
+                                    <label class="form-check-label" for="senior_friendly">
+                                        <i class="fas fa-user-friends me-2"></i>Senior-Friendly Times
+                                    </label>
+                                    <small class="form-text text-muted d-block">Prefer comfortable flight times</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="direct_flights_only" name="direct_flights_only">
+                                    <label class="form-check-label" for="direct_flights_only">
+                                        <i class="fas fa-route me-2"></i>Direct Flights Only
+                                    </label>
+                                    <small class="form-text text-muted d-block">Prefer non-stop flights</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4" id="dateInputs">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input 
+                                    type="date" 
+                                    class="form-control" 
+                                    id="start_date"
+                                    
+                                    data-aos="fade-up"
+                                    data-aos-delay="200"
+                                >
+                                <label for="start_date">Start Date</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input 
+                                    type="date" 
+                                    class="form-control" 
+                                    id="end_date"
+                                    
+                                    data-aos="fade-up"
+                                    data-aos-delay="300"
+                                >
+                                <label for="end_date">End Date</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        class="btn btn-primary btn-lg w-100 mt-4"
+                        data-aos="fade-up"
+                        data-aos-delay="400"
+                    >
+                        <i class="fas fa-magic me-2"></i>
+                        <span id="submitButtonText">Generate Your Perfect Itinerary</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Output Section -->
+    <section id="output" class="output-section hidden">
+        <div class="container">
+            <div class="tab-navigation" data-aos="fade-up">
+                <button class="tab-btn active" data-tab="itinerary">
+                    <i class="fas fa-calendar-alt"></i> Itinerary
+                </button>
+                <button class="tab-btn" data-tab="flights">
+                    <i class="fas fa-plane-departure"></i> Flights
+                </button>
+                <button class="tab-btn" data-tab="hotels">
+                    <i class="fas fa-hotel"></i> Hotels
+                </button>
+                <button class="tab-btn" data-tab="places">
+                    <i class="fas fa-map-marker-alt"></i> Places
+                </button>
+            </div>
+
+            <div class="tab-content" data-aos="fade-up">
+                <div id="itinerary" class="tab-pane active">
+                    <div class="itinerary-header" style="display: none; margin-bottom: 1rem;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="mb-0">Your Travel Itinerary</h3>
+                            <button id="downloadPdfBtn" class="btn btn-primary">
+                                <i class="fas fa-download me-2"></i>Download PDF
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Itinerary content will be inserted here -->
+                </div>
+                
+                <div id="flights" class="tab-pane">
+                    <!-- Flights content will be inserted here -->
+                </div>
+                
+                <div id="hotels" class="tab-pane">
+                    <div class="hotels-grid">
+                        <!-- Hotels content will be inserted here -->
+                    </div>
+                </div>
+                
+                <div id="places" class="tab-pane">
+                    <div class="places-grid">
+                        <!-- Places content will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons" data-aos="fade-up">
+                <button class="btn btn-outline-primary" onclick="downloadPDF()">
+                    <i class="fas fa-download"></i> Download PDF
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loading Animation -->
+    <div id="loading" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Planning your perfect trip...</p>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- AOS Library -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="/static/js/main.js"></script>
+
+    <!-- Add before closing body tag -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <div class="logo-container footer-logo-wrapper">
+                        <img src="/static/images/logo.png" alt="Journezy Logo" class="footer-logo-img">
+                        <div class="logo-text-container">
+                            <!-- <span class="logo-text"></span> -->
+                            <!-- <span class="logo-ai"></span> -->
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-text">
+                    <p>&copy; 2025 Journezy. All Rights Reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html> 

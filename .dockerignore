@@ -1,0 +1,50 @@
+# Version control
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+env/
+venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Environment and configs
+.env
+.env.*
+*.log
+*.cfg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*
+*.md
+README*
+
+# Playwright
+**/playwright-downloads
+**/playwright/.cache/
+**/test-results/
+**/playwright-report/
+
+# Misc
+*.tmp
+*.bak
+*.log
+node_modules/
+
