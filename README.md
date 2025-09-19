@@ -88,7 +88,7 @@ SERPAPI_KEY=your_key
 ### 1. Clone the Repository
 
 ```sh
-git clone https://github.com/your-username/journezy-trip-planner.git
+git clone https://github.com/saitej123/journezy-trip-planner.git
 cd journezy-trip-planner
 ```
 
@@ -100,11 +100,10 @@ pip install -r requirements.txt
 
 ### 3. Set Up Environment
 
-```sh
-# Copy the example environment file
-cp .env.example .env
+Create a `.env` file in the project root with your API keys:
 
-# Edit the .env file with your configuration
+```sh
+# Create the .env file with your configuration
 nano .env
 ```
 
