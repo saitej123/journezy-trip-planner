@@ -300,15 +300,6 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="itinerary_first" name="itinerary_first">
-                                    <label class="form-check-label" for="itinerary_first">
-                                        <i class="fas fa-route me-2"></i>Itinerary-First Planning
-                                    </label>
-                                    <small class="form-text text-muted d-block">Prioritize itinerary over flight selection</small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="consider_toddler_friendly" name="consider_toddler_friendly">
                                     <label class="form-check-label" for="consider_toddler_friendly">
                                         <i class="fas fa-baby me-2"></i>Toddler-Friendly
@@ -475,23 +466,35 @@
                             </button>
                         </div>
                     </div>
+                    <div class="empty-state" style="display: none;">
+                        <i class="fas fa-calendar-alt mb-3" style="font-size: 3rem; color: #ccc;"></i>
+                        <p>No itinerary available yet. Generate your trip to see the detailed itinerary here.</p>
+                    </div>
                     <!-- Itinerary content will be inserted here -->
                 </div>
                 
                 <div id="flights" class="tab-pane">
+                    <div class="empty-state">
+                        <i class="fas fa-plane-departure mb-3" style="font-size: 3rem; color: #ccc;"></i>
+                        <p>No flight information available yet. Generate your trip to see flight options here.</p>
+                    </div>
                     <!-- Flights content will be inserted here -->
                 </div>
                 
                 <div id="hotels" class="tab-pane">
-                    <div class="hotels-grid">
-                        <!-- Hotels content will be inserted here -->
+                    <div class="empty-state">
+                        <i class="fas fa-hotel mb-3" style="font-size: 3rem; color: #ccc;"></i>
+                        <p>No hotel information available yet. Generate your trip to see accommodation options here.</p>
                     </div>
+                    <!-- Hotels content will be inserted here -->
                 </div>
                 
                 <div id="places" class="tab-pane">
-                    <div class="places-grid">
-                        <!-- Places content will be inserted here -->
+                    <div class="empty-state">
+                        <i class="fas fa-map-marker-alt mb-3" style="font-size: 3rem; color: #ccc;"></i>
+                        <p>No places information available yet. Generate your trip to discover amazing places to visit.</p>
                     </div>
+                    <!-- Places content will be inserted here -->
                 </div>
             </div>
 

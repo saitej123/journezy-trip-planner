@@ -33,13 +33,12 @@ class TourPlannerWorkflow:
         self.itinerary = ""
         self.travelers = None
         self.flight_preferences = None
-        self.itinerary_first = False
         self.consider_toddler_friendly = False
         self.consider_senior_friendly = False
         self.safety_check = True
 
     async def run(self, query: str, *, budget_amount: float | None = None, currency: str = "USD", 
-                  travelers=None, flight_preferences=None, itinerary_first: bool = False,
+                  travelers=None, flight_preferences=None,
                   consider_toddler_friendly: bool = False, consider_senior_friendly: bool = False,
                   safety_check: bool = True) -> str:
         """Main workflow execution using Gemini directly"""
@@ -49,7 +48,6 @@ class TourPlannerWorkflow:
         # Store the new parameters
         self.travelers = travelers
         self.flight_preferences = flight_preferences
-        self.itinerary_first = itinerary_first
         self.consider_toddler_friendly = consider_toddler_friendly
         self.consider_senior_friendly = consider_senior_friendly
         self.safety_check = safety_check
@@ -92,29 +90,29 @@ class TourPlannerWorkflow:
                 nights = 0
 
             # Step 2: Flights - prefer Gemini Grounding, then fallback to SerpAPI
-            # Skip flights if itinerary-first is enabled
-            if self.itinerary_first:
-                print("[WORKFLOW] Step 2: Skipping flights (itinerary-first mode)...")
+            print("[WORKFLOW] Step 2: Finding flights (grounded first)...")
+
+            def has_flight_lines(formatted: str) -> bool:
+                if not formatted:
+                    return False
+                header_ok = formatted.startswith("Flights from ")
+                info_ok = ("Price (USD):" in formatted) or ("Total Duration:" in formatted)
+                return header_ok and info_ok
+
+            # Only use the user's primary departure airport to avoid jumping to far-away airports
+            from_list = [extracted_info.tour_info.airport_from] if extracted_info.tour_info.airport_from else []
+            to_list = ([extracted_info.tour_info.airport_to] if extracted_info.tour_info.airport_to else []) + (extracted_info.tour_info.alternative_airports_to or [])
+            # Deduplicate while preserving order
+            seen = set()
+            from_list = [a for a in from_list if not (a in seen or seen.add(a))]
+            seen = set()
+            to_list = [a for a in to_list if not (a in seen or seen.add(a))]
+
+            # Check if we have valid airports
+            if not from_list or not to_list:
+                print("[WORKFLOW] No valid airports found, skipping flight search")
                 self.flights_data = ""
             else:
-                print("[WORKFLOW] Step 2: Finding flights (grounded first)...")
-
-                def has_flight_lines(formatted: str) -> bool:
-                    if not formatted:
-                        return False
-                    header_ok = formatted.startswith("Flights from ")
-                    info_ok = ("Price (USD):" in formatted) or ("Total Duration:" in formatted)
-                    return header_ok and info_ok
-
-                # Only use the user's primary departure airport to avoid jumping to far-away airports
-                from_list = [extracted_info.tour_info.airport_from]
-                to_list = [extracted_info.tour_info.airport_to] + (extracted_info.tour_info.alternative_airports_to or [])
-                # Deduplicate while preserving order
-                seen = set()
-                from_list = [a for a in from_list if not (a in seen or seen.add(a))]
-                seen = set()
-                to_list = [a for a in to_list if not (a in seen or seen.add(a))]
-
                 # 2.a Grounded primary
                 grounded_found = False
                 flights_formatted = ""
@@ -285,12 +283,33 @@ class TourPlannerWorkflow:
 
             # Step 4: Find places to visit
             print("📍 [WORKFLOW] Step 4: Finding places...")
-            self.places_data = find_places_to_visit(
-                destination, 
-                toddler_friendly=self.consider_toddler_friendly,
-                senior_friendly=self.consider_senior_friendly
-            )
-            print(f"✅ [WORKFLOW] Places data retrieved")
+            try:
+                self.places_data = find_places_to_visit(
+                    destination, 
+                    toddler_friendly=self.consider_toddler_friendly,
+                    senior_friendly=self.consider_senior_friendly
+                )
+                print(f"✅ [WORKFLOW] Places data retrieved: {len(self.places_data) if self.places_data else 0} characters")
+            except Exception as e:
+                print(f"❌ [WORKFLOW] Error finding places: {str(e)}")
+                # Create fallback places data
+                self.places_data = f"Here are the top places to visit in {destination}:\n\n"
+                self.places_data += f"{destination} City Center\n"
+                self.places_data += "Description: Explore the vibrant heart of the city\n"
+                self.places_data += "Rating: 4.2 (Popular destination)\n"
+                self.places_data += "Price: Free Entry\n"
+                self.places_data += "Image: N/A\n\n"
+                self.places_data += f"{destination} Historic Area\n"
+                self.places_data += "Description: Discover local history and architecture\n"
+                self.places_data += "Rating: 4.3 (Historical significance)\n"
+                self.places_data += "Price: Free Entry\n"
+                self.places_data += "Image: N/A\n\n"
+                self.places_data += f"Local Attractions\n"
+                self.places_data += "Description: Popular local sights and activities\n"
+                self.places_data += "Rating: 4.0 (Various options)\n"
+                self.places_data += "Price: Varies\n"
+                self.places_data += "Image: N/A\n"
+                print(f"✅ [WORKFLOW] Created fallback places data")
 
             # Step 5: Generate itinerary using Gemini
             print("📄 [WORKFLOW] Step 5: Generating itinerary with Gemini...")
@@ -348,8 +367,6 @@ class TourPlannerWorkflow:
                 special_considerations += "\n- Include toddler-friendly activities and accommodations\n"
             if self.consider_senior_friendly:
                 special_considerations += "\n- Include senior citizen-friendly activities and accommodations\n"
-            if self.itinerary_first:
-                special_considerations += "\n- Prioritize itinerary planning over flight selection\n"
 
             # Add flight preferences context
             flight_prefs_context = ""
@@ -396,120 +413,69 @@ class TourPlannerWorkflow:
             return f"Error occurred during trip planning: {str(e)}"
 
     async def _generate_pdf_from_markdown(self, markdown_content: str) -> str:
-        """Convert markdown content to PDF and return as base64"""
+        """Generate comprehensive PDF with itinerary, flights, hotels, and places data"""
         try:
-            print("📄 [PDF-GEN] Starting PDF generation process...")
+            print("📄 [PDF-GEN] Starting comprehensive PDF generation...")
 
-            # Check if wkhtmltopdf is available
-            try:
-                import pdfkit
-                config = pdfkit.configuration()
-                print(f"✅ [PDF-GEN] wkhtmltopdf found at: {config.wkhtmltopdf}")
-            except Exception as wkhtml_error:
-                print(f"❌ [PDF-GEN] wkhtmltopdf not found: {str(wkhtml_error)}")
-                print("🔄 [PDF-GEN] Falling back to markdown download")
-                return self._fallback_markdown_download(markdown_content)
-
-            # Generate temporary filenames using timestamp
+            # Generate HTML content with all travel data
+            html_content = self._create_complete_html_content(markdown_content)
+            
+            # Generate temporary filename using timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            md_file = os.path.join(tempfile.gettempdir(), f"itinerary_{timestamp}.md")
             pdf_file = os.path.join(tempfile.gettempdir(), f"itinerary_{timestamp}.pdf")
+            print(f"📝 [PDF-GEN] Creating PDF file: {pdf_file}")
 
-            print(f"📝 [PDF-GEN] Creating temporary files: {md_file}, {pdf_file}")
-
-            # Write markdown file
-            with open(md_file, "w", encoding='utf-8') as f:
-                f.write(markdown_content)
-            print("✅ [PDF-GEN] Markdown file written")
-
-            # Convert markdown to HTML
+            # Try using xhtml2pdf first (more reliable than wkhtmltopdf)
             try:
-                html_content = gh_md_to_html.markdown_to_html_via_github_api(markdown_content)
-                print("✅ [PDF-GEN] Markdown converted to HTML")
-            except Exception as html_error:
-                print(f"❌ [PDF-GEN] HTML conversion failed: {str(html_error)}")
-                return self._fallback_markdown_download(markdown_content)
-
-            # Create HTML template
-            html_template = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body {{
-                        font-family: Arial, sans-serif;
-                        direction: ltr;
-                        line-height: 1.6;
-                        margin: 2em;
-                        font-size: 14px;
-                    }}
-                    h1, h2, h3 {{ margin-top: 1em; }}
-                    .content {{ max-width: 800px; margin: 0 auto; }}
-                    img {{ max-width: 100%; height: auto; }}
-                    pre {{ white-space: pre-wrap; }}
-                    code {{ background: #f5f5f5; padding: 2px 4px; border-radius: 3px; }}
-                </style>
-            </head>
-            <body>
-                <div class="content">
-                    {html_content}
-                </div>
-            </body>
-            </html>
-            """
-
-            print("🎨 [PDF-GEN] HTML template created")
-
-            # Configure pdfkit options
-            options = {{
-                'encoding': 'UTF-8',
-                'enable-local-file-access': None,
-                'margin-top': '20mm',
-                'margin-right': '20mm',
-                'margin-bottom': '20mm',
-                'margin-left': '20mm',
-                'custom-header': [('Accept-Encoding', 'gzip')],
-                'no-outline': None,
-                'quiet': ''
-            }}
-
-            # Generate PDF
-            try:
-                pdfkit.from_string(html_template, pdf_file, options=options)
-                print("✅ [PDF-GEN] PDF generated successfully")
-            except Exception as pdf_error:
-                print(f"❌ [PDF-GEN] PDF generation failed: {str(pdf_error)}")
-                # Hard fallback to xhtml2pdf to always return a PDF
+                from xhtml2pdf import pisa
+                print("✅ [PDF-GEN] Using xhtml2pdf for PDF generation")
+                
+                with open(pdf_file, 'wb') as output_file:
+                    pisa_status = pisa.CreatePDF(html_content, dest=output_file)
+                
+                if pisa_status.err:
+                    print(f"⚠️ [PDF-GEN] xhtml2pdf warnings: {pisa_status.err}")
+                
+                if os.path.exists(pdf_file) and os.path.getsize(pdf_file) > 1000:
+                    print("✅ [PDF-GEN] PDF generated successfully with xhtml2pdf")
+                else:
+                    raise RuntimeError("xhtml2pdf generated invalid or empty PDF")
+                    
+            except Exception as xhtml_error:
+                print(f"❌ [PDF-GEN] xhtml2pdf failed: {str(xhtml_error)}")
+                
+                # Fallback to pdfkit if available
                 try:
-                    from xhtml2pdf import pisa
-                    # Use the same HTML we built
-                    with open(pdf_file, 'wb') as outf:
-                        pisa.CreatePDF(html_template, dest=outf)
-                    if not os.path.exists(pdf_file) or os.path.getsize(pdf_file) < 1000:
-                        raise RuntimeError("xhtml2pdf produced an invalid PDF")
-                except Exception as e2:
-                    print(f"❌ [PDF-GEN] xhtml2pdf fallback failed: {e2}")
-                    raise
+                    import pdfkit
+                    print("🔄 [PDF-GEN] Falling back to pdfkit...")
+                    
+                    options = {
+                        'encoding': 'UTF-8',
+                        'enable-local-file-access': None,
+                        'margin-top': '20mm',
+                        'margin-right': '20mm',
+                        'margin-bottom': '20mm',
+                        'margin-left': '20mm',
+                        'no-outline': None,
+                        'quiet': ''
+                    }
+                    
+                    pdfkit.from_string(html_content, pdf_file, options=options)
+                    print("✅ [PDF-GEN] PDF generated successfully with pdfkit")
+                    
+                except Exception as pdfkit_error:
+                    print(f"❌ [PDF-GEN] pdfkit also failed: {str(pdfkit_error)}")
+                    return self._fallback_markdown_download(markdown_content)
 
-            # Check if PDF file was created and has content
+            # Verify PDF was created successfully
             if not os.path.exists(pdf_file):
                 print("❌ [PDF-GEN] PDF file was not created")
-                # Last resort: try xhtml2pdf as well
-                try:
-                    from xhtml2pdf import pisa
-                    with open(pdf_file, 'wb') as outf:
-                        pisa.CreatePDF(html_template, dest=outf)
-                    if not os.path.exists(pdf_file) or os.path.getsize(pdf_file) < 1000:
-                        raise RuntimeError("xhtml2pdf produced an invalid PDF")
-                except Exception as e3:
-                    print(f"❌ [PDF-GEN] xhtml2pdf fallback (size check) failed: {e3}")
-                    return self._fallback_markdown_download(markdown_content)
+                return self._fallback_markdown_download(markdown_content)
 
             file_size = os.path.getsize(pdf_file)
             print(f"📊 [PDF-GEN] PDF file size: {file_size} bytes")
 
-            if file_size < 1000:  # PDF should be at least 1KB
+            if file_size < 1000:
                 print("❌ [PDF-GEN] PDF file is too small, likely corrupted")
                 return self._fallback_markdown_download(markdown_content)
 
@@ -522,21 +488,510 @@ class TourPlannerWorkflow:
             pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
             print(f"✅ [PDF-GEN] PDF converted to base64 ({len(pdf_base64)} characters)")
 
-            # Clean up temporary files
+            # Clean up temporary file
             try:
-                os.unlink(md_file)
                 os.unlink(pdf_file)
-                print("🧹 [PDF-GEN] Temporary files cleaned up")
+                print("🧹 [PDF-GEN] Temporary file cleaned up")
             except Exception as cleanup_error:
                 print(f"⚠️ [PDF-GEN] Cleanup warning: {str(cleanup_error)}")
 
             print("✅ [PDF-GEN] PDF generation completed successfully")
-            print(f"🎯 [PDF-GEN] Ready for download - {len(pdf_base64)} characters of base64 data")
             return pdf_base64
 
         except Exception as e:
             print(f"❌ [PDF-GEN] Unexpected error in PDF generation: {str(e)}")
+            import traceback
+            print(f"❌ [PDF-GEN] Traceback: {traceback.format_exc()}")
             return self._fallback_markdown_download(markdown_content)
+
+    def _create_complete_html_content(self, itinerary_content: str) -> str:
+        """Create comprehensive HTML content with all travel data"""
+        try:
+            print("🎨 [PDF-GEN] Creating comprehensive HTML content...")
+            
+            # Convert markdown itinerary to HTML
+            try:
+                import markdown
+                itinerary_html = markdown.markdown(itinerary_content, extensions=['tables', 'fenced_code'])
+            except ImportError:
+                # Fallback: simple markdown to HTML conversion
+                itinerary_html = itinerary_content.replace('\n', '<br>')
+            
+            # Create comprehensive HTML document
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Travel Itinerary - Journezy Trip Planner</title>
+                <style>
+                    @page {{
+                        margin: 12mm;
+                        size: A4;
+                    }}
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        line-height: 1.3;
+                        margin: 0;
+                        padding: 0;
+                        color: #2d3748;
+                        background: #fff;
+                        font-size: 11px;
+                    }}
+                    .header {{
+                        text-align: center;
+                        margin-bottom: 15px;
+                        padding: 12px 0;
+                        background: linear-gradient(135deg, #4299e1, #667eea);
+                        color: white;
+                        border-radius: 6px;
+                    }}
+                    .header h1 {{
+                        font-size: 20px;
+                        margin: 0;
+                        font-weight: 700;
+                    }}
+                    .header .subtitle {{
+                        font-size: 11px;
+                        margin-top: 4px;
+                        opacity: 0.9;
+                        font-weight: 300;
+                    }}
+                    .section {{
+                        margin-bottom: 10px;
+                        page-break-inside: avoid;
+                        background: white;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 4px;
+                        padding: 8px;
+                    }}
+                    .section-title {{
+                        background: #4299e1;
+                        color: white;
+                        padding: 6px 10px;
+                        margin: -8px -8px 8px -8px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        border-radius: 4px 4px 0 0;
+                    }}
+                    .itinerary-content {{
+                        background: #f8fafc;
+                        padding: 8px;
+                        border-radius: 3px;
+                        border-left: 3px solid #4299e1;
+                        font-size: 10px;
+                        line-height: 1.3;
+                    }}
+                    .flight-item, .hotel-item, .place-item {{
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 4px;
+                        padding: 6px;
+                        margin-bottom: 6px;
+                        border-left: 3px solid #4299e1;
+                    }}
+                    .flight-header {{
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 15px;
+                        padding-bottom: 10px;
+                        border-bottom: 1px solid #e2e8f0;
+                    }}
+                    .flight-route {{
+                        background: #f7fafc;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin: 10px 0;
+                        text-align: center;
+                    }}
+                    .route-info {{
+                        font-weight: 600;
+                        color: #2b6cb0;
+                        margin-bottom: 5px;
+                    }}
+                    .duration-info {{
+                        color: #4a5568;
+                        font-size: 14px;
+                    }}
+                    .price-tag {{
+                        background: linear-gradient(135deg, #4299e1, #667eea);
+                        color: white;
+                        padding: 8px 16px;
+                        border-radius: 20px;
+                        font-weight: 600;
+                        font-size: 16px;
+                    }}
+                    .item-title {{
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: #2b6cb0;
+                        margin-bottom: 4px;
+                        line-height: 1.2;
+                    }}
+                    .item-details {{
+                        font-size: 10px;
+                        color: #4a5568;
+                        line-height: 1.3;
+                    }}
+                    .detail-item {{
+                        margin-bottom: 2px;
+                        display: block;
+                    }}
+                    .detail-item .icon {{
+                        margin-right: 3px;
+                        color: #4299e1;
+                        font-size: 9px;
+                    }}
+                    .amenities {{
+                        margin-top: 4px;
+                    }}
+                    .amenity {{
+                        display: inline-block;
+                        background: #e6fffa;
+                        padding: 1px 4px;
+                        border-radius: 3px;
+                        font-size: 8px;
+                        color: #234e52;
+                        margin: 1px 2px 1px 0;
+                    }}
+                    .footer {{
+                        margin-top: 15px;
+                        text-align: center;
+                        color: #718096;
+                        font-size: 9px;
+                        border-top: 1px solid #e2e8f0;
+                        padding-top: 8px;
+                    }}
+                    .no-data {{
+                        text-align: center;
+                        color: #a0aec0;
+                        font-style: italic;
+                        padding: 30px;
+                        background: #f7fafc;
+                        border-radius: 8px;
+                        border: 2px dashed #e2e8f0;
+                    }}
+                    h1, h2, h3, h4, h5, h6 {{
+                        color: #2b6cb0;
+                        margin: 6px 0 3px 0;
+                        font-weight: 600;
+                        line-height: 1.2;
+                    }}
+                    h1 {{ font-size: 16px; }}
+                    h2 {{ font-size: 14px; }}
+                    h3 {{ font-size: 12px; }}
+                    h4 {{ font-size: 11px; }}
+                    ul, ol {{
+                        padding-left: 12px;
+                        margin: 3px 0;
+                    }}
+                    li {{
+                        margin-bottom: 2px;
+                        color: #4a5568;
+                        font-size: 10px;
+                        line-height: 1.3;
+                    }}
+                    p {{
+                        margin: 3px 0;
+                        color: #4a5568;
+                        font-size: 10px;
+                        line-height: 1.3;
+                    }}
+                    table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 15px 0;
+                        background: white;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+                    }}
+                    table th, table td {{
+                        border: 1px solid #e2e8f0;
+                        padding: 12px 15px;
+                        text-align: left;
+                    }}
+                    table th {{
+                        background: linear-gradient(135deg, #4299e1, #667eea);
+                        color: white;
+                        font-weight: 600;
+                        font-size: 14px;
+                    }}
+                    table td {{
+                        background: #f7fafc;
+                        color: #4a5568;
+                    }}
+                    .page-break {{
+                        page-break-before: always;
+                    }}
+                    blockquote {{
+                        border-left: 4px solid #4299e1;
+                        padding-left: 20px;
+                        margin: 20px 0;
+                        font-style: italic;
+                        color: #4a5568;
+                        background: #f7fafc;
+                        padding: 15px 20px;
+                        border-radius: 0 8px 8px 0;
+                    }}
+                    code {{
+                        background: #edf2f7;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-family: 'Consolas', 'Monaco', monospace;
+                        color: #2d3748;
+                    }}
+                    pre {{
+                        background: #edf2f7;
+                        padding: 15px;
+                        border-radius: 8px;
+                        overflow-x: auto;
+                        border-left: 2px solid #4299e1;
+                        font-size: 9px;
+                        margin: 3px 0;
+                    }}
+                    .place-image {{
+                        max-width: 80px;
+                        height: auto;
+                        border-radius: 3px;
+                        margin: 2px 6px 2px 0;
+                        float: right;
+                    }}
+                    .place-image-section {{
+                        clear: both;
+                        margin: 4px 0;
+                    }}
+                    .compact-list {{
+                        margin: 0;
+                        padding: 0;
+                    }}
+                    .compact-list li {{
+                        margin-bottom: 1px;
+                        font-size: 10px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>✈️ Your Perfect Travel Itinerary</h1>
+                    <div class="subtitle">Crafted with AI by Journezy Trip Planner</div>
+                    <div class="subtitle" style="margin-top: 5px; font-size: 14px;">Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">📋 Complete Itinerary</h2>
+                    <div class="itinerary-content">
+                        {itinerary_html}
+                    </div>
+                </div>
+
+                {self._generate_flights_html()}
+                
+                {self._generate_hotels_html()}
+                
+                {self._generate_places_html()}
+
+                <div class="footer">
+                    <p>This itinerary was generated by <strong>Journezy Trip Planner</strong></p>
+                    <p>AI-powered travel planning with real-time data • Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            print("✅ [PDF-GEN] HTML content created successfully")
+            return html_content
+            
+        except Exception as e:
+            print(f"❌ [PDF-GEN] Error creating HTML content: {str(e)}")
+            # Fallback to simple HTML
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Travel Itinerary</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
+                    h1 {{ color: #1E3A8A; }}
+                </style>
+            </head>
+            <body>
+                <h1>Travel Itinerary</h1>
+                <div>{itinerary_content.replace(chr(10), '<br>')}</div>
+                <p><em>Generated by Journezy Trip Planner on {datetime.now().strftime('%Y-%m-%d')}</em></p>
+            </body>
+            </html>
+            """
+
+    def _generate_flights_html(self) -> str:
+        """Generate HTML for flights section"""
+        if not self.flights_data or self.flights_data.strip() == "":
+            return '<div class="section"><h2 class="section-title">✈️ Flights</h2><div class="no-data">No flight information available</div></div>'
+        
+        flights_html = '<div class="section page-break"><h2 class="section-title">✈️ Flights</h2>'
+        
+        try:
+            # Parse flight data
+            lines = self.flights_data.split('\n')
+            current_flight = {}
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    if current_flight:
+                        flights_html += self._format_flight_html(current_flight)
+                        current_flight = {}
+                elif ' - ' in line and ('→' in line or '->' in line):
+                    if current_flight:
+                        flights_html += self._format_flight_html(current_flight)
+                    current_flight = {'route': line}
+                elif line.startswith('Price'):
+                    current_flight['price'] = line
+                elif line.startswith('Duration') or line.startswith('Total Duration'):
+                    current_flight['duration'] = line
+            
+            if current_flight:
+                flights_html += self._format_flight_html(current_flight)
+                
+        except Exception as e:
+            print(f"⚠️ [PDF-GEN] Error parsing flights: {str(e)}")
+            flights_html += f'<div class="flight-item"><pre>{self.flights_data}</pre></div>'
+        
+        flights_html += '</div>'
+        return flights_html
+
+    def _format_flight_html(self, flight_data: dict) -> str:
+        """Format individual flight data as HTML"""
+        return f"""
+        <div class="flight-item">
+            <div class="item-title">{flight_data.get('route', 'Flight Information')}</div>
+            <div class="item-details">
+                {f'<div class="detail-item"><span class="icon">💰</span>{flight_data["price"]}</div>' if 'price' in flight_data else ''}
+                {f'<div class="detail-item"><span class="icon">⏱️</span>{flight_data["duration"]}</div>' if 'duration' in flight_data else ''}
+            </div>
+        </div>
+        """
+
+    def _generate_hotels_html(self) -> str:
+        """Generate HTML for hotels section"""
+        if not self.hotels_data or self.hotels_data.strip() == "":
+            return '<div class="section"><h2 class="section-title">🏨 Hotels</h2><div class="no-data">No hotel information available</div></div>'
+        
+        hotels_html = '<div class="section page-break"><h2 class="section-title">🏨 Hotels</h2>'
+        
+        try:
+            # Parse hotel blocks
+            hotel_blocks = self.hotels_data.split('\n\n')[1:]  # Skip header
+            
+            for hotel_block in hotel_blocks:
+                if hotel_block.strip():
+                    hotels_html += self._format_hotel_html(hotel_block)
+                    
+        except Exception as e:
+            print(f"⚠️ [PDF-GEN] Error parsing hotels: {str(e)}")
+            hotels_html += f'<div class="hotel-item"><pre>{self.hotels_data}</pre></div>'
+        
+        hotels_html += '</div>'
+        return hotels_html
+
+    def _format_hotel_html(self, hotel_block: str) -> str:
+        """Format individual hotel data as HTML"""
+        lines = hotel_block.split('\n')
+        hotel_name = lines[0] if lines else 'Hotel'
+        
+        details = []
+        amenities = []
+        
+        for line in lines[1:]:
+            line = line.strip()
+            if line.startswith('Rate per night:'):
+                details.append(f'<div class="detail-item"><span class="icon">💰</span>{line}</div>')
+            elif line.startswith('Rating:'):
+                details.append(f'<div class="detail-item"><span class="icon">⭐</span>{line}</div>')
+            elif line.startswith('Location Rating:'):
+                details.append(f'<div class="detail-item"><span class="icon">📍</span>{line}</div>')
+            elif line.startswith('Amenities:'):
+                amenity_list = line.replace('Amenities:', '').split(',')
+                amenities = [f'<span class="amenity">{a.strip()}</span>' for a in amenity_list if a.strip()]
+        
+        amenities_html = f'<div class="amenities">{"".join(amenities)}</div>' if amenities else ''
+        
+        return f"""
+        <div class="hotel-item">
+            <div class="item-title">{hotel_name}</div>
+            <div class="item-details">
+                {"".join(details)}
+            </div>
+            {amenities_html}
+        </div>
+        """
+
+    def _generate_places_html(self) -> str:
+        """Generate HTML for places section"""
+        if not self.places_data or self.places_data.strip() == "":
+            return '<div class="section"><h2 class="section-title">📍 Places to Visit</h2><div class="no-data">No places information available</div></div>'
+        
+        places_html = '<div class="section page-break"><h2 class="section-title">📍 Places to Visit</h2>'
+        
+        try:
+            # Parse places data
+            lines = self.places_data.split('\n')
+            current_place = {}
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    if current_place:
+                        places_html += self._format_place_html(current_place)
+                        current_place = {}
+                elif line.startswith('Description:'):
+                    current_place['description'] = line.replace('Description:', '').strip()
+                elif line.startswith('Rating:'):
+                    current_place['rating'] = line
+                elif line.startswith('Price:'):
+                    current_place['price'] = line
+                elif not line.startswith('Here are') and not line.startswith('Image:') and not current_place.get('name'):
+                    current_place['name'] = line
+            
+            if current_place:
+                places_html += self._format_place_html(current_place)
+                
+        except Exception as e:
+            print(f"⚠️ [PDF-GEN] Error parsing places: {str(e)}")
+            places_html += f'<div class="place-item"><pre>{self.places_data}</pre></div>'
+        
+        places_html += '</div>'
+        return places_html
+
+    def _format_place_html(self, place_data: dict) -> str:
+        """Format individual place data as HTML"""
+        # Include image if available
+        image_html = ""
+        if 'image' in place_data and place_data['image'] and place_data['image'] != 'N/A':
+            image_html = f"""
+            <div class="place-image-section">
+                <img src="{place_data['image']}" alt="{place_data.get('name', 'Place')}" 
+                     style="max-width: 200px; max-height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;" 
+                     onerror="this.style.display='none';">
+            </div>
+            """
+        
+        return f"""
+        <div class="place-item">
+            <div class="place-header">
+                <div class="item-title">📍 {place_data.get('name', 'Attraction')}</div>
+                {f'<div class="place-price-tag">{place_data["price"]}</div>' if 'price' in place_data and place_data["price"] != 'N/A' else ''}
+            </div>
+            {image_html}
+            <div class="item-details">
+                {f'<div class="detail-item"><i class="fas fa-info-circle" style="color: #10b981; margin-right: 5px;"></i>{place_data["description"]}</div>' if 'description' in place_data and place_data["description"] != 'N/A' else ''}
+                {f'<div class="detail-item"><i class="fas fa-star" style="color: #f59e0b; margin-right: 5px;"></i>{place_data["rating"]}</div>' if 'rating' in place_data and place_data["rating"] != 'N/A' else ''}
+            </div>
+        </div>
+        """
 
     def _fallback_markdown_download(self, markdown_content: str) -> str:
         """Fallback to markdown download when PDF generation fails"""

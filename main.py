@@ -89,10 +89,6 @@ class TripRequest(BaseModel):
         default_factory=FlightPreferences,
         description="Flight preferences and constraints"
     )
-    itinerary_first: bool = Field(
-        default=False,
-        description="Whether to prioritize itinerary planning over flight selection"
-    )
     consider_toddler_friendly: bool = Field(
         default=False,
         description="Consider toddler-friendly activities and accommodations"
@@ -128,8 +124,10 @@ class TripRequest(BaseModel):
         """Builds a structured query from the input fields"""
         query_parts = [f"Plan a trip from {self.from_city} to {self.to_city}"]
         
-        if self.start_date and self.end_date:
-            query_parts.append(f"from {self.start_date} to {self.end_date}")
+        # Use get_dates() to ensure we have proper date strings
+        start_date, end_date = self.get_dates()
+        if start_date and end_date:
+            query_parts.append(f"from {start_date} to {end_date}")
 
         # Add traveler information
         traveler_info = []
@@ -155,8 +153,6 @@ class TripRequest(BaseModel):
             special_considerations.append("toddler-friendly activities and accommodations")
         if self.consider_senior_friendly:
             special_considerations.append("senior citizen-friendly activities and accommodations")
-        if self.itinerary_first:
-            special_considerations.append("itinerary-first planning approach")
         
         if special_considerations:
             query_parts.append(f"considering {', '.join(special_considerations)}")
@@ -231,10 +227,17 @@ async def plan_trip(request: TripRequest):
         print(f"📝 [PLAN-TRIP] Request: {request.from_city} -> {request.to_city}")
 
         start_date, end_date = request.get_dates()
+        print(f"📅 [PLAN-TRIP] Trip dates: {start_date} to {end_date}")
 
         # Build the structured query
         query = request.build_query()
         print(f"🔍 [PLAN-TRIP] Generated query: {query}")
+        
+        # Ensure dates are properly formatted strings
+        if not isinstance(start_date, str):
+            start_date = start_date.strftime("%Y-%m-%d") if hasattr(start_date, 'strftime') else str(start_date)
+        if not isinstance(end_date, str):
+            end_date = end_date.strftime("%Y-%m-%d") if hasattr(end_date, 'strftime') else str(end_date)
 
         # Validate and normalize language (whitelist of supported codes)
         supported_langs = ["en", "hi", "es", "fr", "de", "it", "pt", "ja", "ko", "zh", "ar"]
@@ -267,7 +270,6 @@ async def plan_trip(request: TripRequest):
                     currency=(request.currency or "USD"),
                     travelers=request.travelers,
                     flight_preferences=request.flight_preferences,
-                    itinerary_first=request.itinerary_first,
                     consider_toddler_friendly=request.consider_toddler_friendly,
                     consider_senior_friendly=request.consider_senior_friendly,
                     safety_check=request.safety_check
@@ -279,13 +281,15 @@ async def plan_trip(request: TripRequest):
             print("⏰ [PLAN-TRIP] Request timed out after 5 minutes")
             return TripResponse(
                 status="error",
-                message="Trip planning timed out. Please try again with a simpler request.",
+                message="Trip planning timed out after 5 minutes. This may happen with complex requests. Please try again with a simpler request or check your internet connection.",
                 itinerary={
                     "flights": {"data": getattr(workflow, 'flights_data', None), "formatted": True},
                     "hotels": {"data": getattr(workflow, 'hotels_data', None), "formatted": True},
                     "places": {"data": getattr(workflow, 'places_data', None), "formatted": True},
                     "itinerary": {"data": getattr(workflow, 'itinerary', None), "formatted": True}
-                }
+                },
+                document=None,
+                document_type="markdown"
             )
         except Exception as workflow_err:
             print(f"❌ [PLAN-TRIP] Workflow error: {workflow_err}")
@@ -299,7 +303,9 @@ async def plan_trip(request: TripRequest):
                     "hotels": {"data": getattr(workflow, 'hotels_data', None), "formatted": True},
                     "places": {"data": getattr(workflow, 'places_data', None), "formatted": True},
                     "itinerary": {"data": getattr(workflow, 'itinerary', None), "formatted": True}
-                }
+                },
+                document=None,
+                document_type="markdown"
             )
         print(f"🤖 [MAIN] Workflow result type: {type(result)}")
         print(f"📝 [MAIN] Result preview: {result[:200] if isinstance(result, str) else str(result)[:200]}...")
@@ -310,26 +316,42 @@ async def plan_trip(request: TripRequest):
         places_data = getattr(workflow, 'places_data', None)
         itinerary_data = getattr(workflow, 'itinerary', None)
         
-        print(f"🔍 [MAIN] Flights data: {flights_data[:200] if flights_data else 'None'}...")
-        print(f"🔍 [MAIN] Hotels data: {hotels_data[:200] if hotels_data else 'None'}...")
-        print(f"🔍 [MAIN] Places data: {places_data[:200] if places_data else 'None'}...")
-        print(f"🔍 [MAIN] Itinerary data: {itinerary_data[:200] if itinerary_data else 'None'}...")
+        # Safe string conversion for logging
+        def safe_preview(data, length=200):
+            if data is None:
+                return 'None'
+            elif isinstance(data, str):
+                return data[:length] + '...' if len(data) > length else data
+            else:
+                return str(data)[:length] + '...'
+        
+        print(f"🔍 [MAIN] Flights data: {safe_preview(flights_data)}")
+        print(f"🔍 [MAIN] Hotels data: {safe_preview(hotels_data)}")
+        print(f"🔍 [MAIN] Places data: {safe_preview(places_data)}")
+        print(f"🔍 [MAIN] Itinerary data: {safe_preview(itinerary_data)}")
+        
+        # Ensure we have valid data for each section or provide fallbacks
+        def ensure_valid_data(data, section_name):
+            if data is None or (isinstance(data, str) and (data.strip() == "" or "Error" in data or "Failed" in data)):
+                print(f"⚠️ [MAIN] {section_name} data is empty or contains errors, will use frontend fallback")
+                return None
+            return data
         
         workflow_data = {
             "flights": {
-                "data": flights_data,
+                "data": ensure_valid_data(flights_data, "Flights"),
                 "formatted": True
             },
             "hotels": {
-                "data": hotels_data,
+                "data": ensure_valid_data(hotels_data, "Hotels"),
                 "formatted": True
             },
             "places": {
-                "data": places_data,
+                "data": ensure_valid_data(places_data, "Places"),
                 "formatted": True
             },
             "itinerary": {
-                "data": itinerary_data,
+                "data": ensure_valid_data(itinerary_data, "Itinerary"),
                 "formatted": True
             }
         }
@@ -340,79 +362,116 @@ async def plan_trip(request: TripRequest):
             return TripResponse(
                 status="error",
                 message=result,
-                itinerary=workflow_data
+                itinerary=workflow_data,
+                document=None,
+                document_type="markdown"
             )
 
-        # Normalize workflow output to base64 PDF or markdown string
+        # Handle workflow output - now returns base64 PDF directly
         print("✅ [MAIN] Workflow completed successfully")
         document_data: Optional[str] = None
-        document_type: str = "markdown"
+        document_type: str = "pdf"  # Default to PDF since workflow now generates PDFs
 
         try:
-            # Case 1: result is a path to a generated PDF file
-            if isinstance(result, str) and result.lower().endswith('.pdf') and os.path.exists(result):
-                print(f"📄 [MAIN] Detected PDF file output at: {result}")
-                try:
-                    with open(result, 'rb') as f:
-                        pdf_content = f.read()
-                    pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
-                    document_data = pdf_base64
+            if isinstance(result, str):
+                # Check if it's a base64-encoded PDF (new workflow behavior)
+                if len(result) > 1000 and not any(char in result for char in ['\n', '#', '*', '-']):
+                    # Likely base64 PDF data
+                    print("📄 [MAIN] Detected base64 PDF output from workflow")
+                    document_data = result
                     document_type = "pdf"
-                except Exception as file_err:
-                    print(f"⚠️ [MAIN] Error reading PDF file: {file_err}")
-                    document_data = str(result)
-                    document_type = "markdown"
-
-                # Clean up temp files
-                try:
-                    os.unlink(result)
-                except Exception as cleanup_err:
-                    print(f"⚠️ [MAIN] Error cleaning up PDF file: {cleanup_err}")
-                
-                md_file = result.replace('.pdf', '.md')
-                if os.path.exists(md_file):
+                    
+                    # Validate it's actually PDF data
                     try:
-                        os.unlink(md_file)
-                    except Exception as md_cleanup_err:
-                        print(f"⚠️ [MAIN] Error cleaning up markdown file: {md_cleanup_err}")
-
-            # Case 2: result is a path to a markdown file
-            elif isinstance(result, str) and os.path.exists(result) and result.lower().endswith('.md'):
-                print(f"📝 [MAIN] Detected markdown file output at: {result}")
-                try:
-                    with open(result, 'r', encoding='utf-8') as f:
-                        document_data = f.read()
-                    document_type = "markdown"
-                except Exception as file_err:
-                    print(f"⚠️ [MAIN] Error reading markdown file: {file_err}")
-                    document_data = str(result)
-                    document_type = "markdown"
+                        # Quick validation: decode a small portion to check PDF signature
+                        test_decode = base64.b64decode(result[:100])
+                        if test_decode.startswith(b'%PDF'):
+                            print("✅ [MAIN] Validated PDF signature in base64 data")
+                        else:
+                            print("⚠️ [MAIN] Base64 data doesn't appear to be a valid PDF, treating as text")
+                            document_data = result
+                            document_type = "markdown"
+                    except Exception as validation_err:
+                        print(f"⚠️ [MAIN] PDF validation failed: {validation_err}, treating as text")
+                        document_data = result
+                        document_type = "markdown"
                 
-                try:
-                    os.unlink(result)
-                except Exception as cleanup_err:
-                    print(f"⚠️ [MAIN] Error cleaning up markdown file: {cleanup_err}")
+                # Check if it's a file path
+                elif os.path.exists(result):
+                    if result.lower().endswith('.pdf'):
+                        print(f"📄 [MAIN] Detected PDF file output at: {result}")
+                        try:
+                            with open(result, 'rb') as f:
+                                pdf_content = f.read()
+                            pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+                            document_data = pdf_base64
+                            document_type = "pdf"
+                            print(f"✅ [MAIN] Successfully encoded PDF file to base64")
+                        except Exception as file_err:
+                            print(f"❌ [MAIN] Error reading PDF file: {file_err}")
+                            document_data = result
+                            document_type = "markdown"
 
-            # Case 3: result is raw bytes (PDF)
+                        # Clean up temp file
+                        try:
+                            os.unlink(result)
+                            print(f"🧹 [MAIN] Cleaned up temp PDF file: {result}")
+                        except Exception as cleanup_err:
+                            print(f"⚠️ [MAIN] Error cleaning up PDF file: {cleanup_err}")
+                    
+                    elif result.lower().endswith('.md'):
+                        print(f"📝 [MAIN] Detected markdown file output at: {result}")
+                        try:
+                            with open(result, 'r', encoding='utf-8') as f:
+                                document_data = f.read()
+                            document_type = "markdown"
+                            print(f"✅ [MAIN] Successfully read markdown file")
+                        except Exception as file_err:
+                            print(f"❌ [MAIN] Error reading markdown file: {file_err}")
+                            document_data = result
+                            document_type = "markdown"
+                        
+                        # Clean up temp file
+                        try:
+                            os.unlink(result)
+                            print(f"🧹 [MAIN] Cleaned up temp markdown file: {result}")
+                        except Exception as cleanup_err:
+                            print(f"⚠️ [MAIN] Error cleaning up markdown file: {cleanup_err}")
+                    else:
+                        print(f"📝 [MAIN] Unknown file type, treating as text: {result}")
+                        document_data = result
+                        document_type = "markdown"
+                
+                # Error message or markdown/text content
+                else:
+                    print("📝 [MAIN] Treating workflow output as text content")
+                    document_data = result
+                    document_type = "markdown"
+            
+            # Handle binary data (fallback case)
             elif isinstance(result, (bytes, bytearray)):
                 print("📦 [MAIN] Detected binary output; encoding as base64 PDF")
                 try:
                     pdf_base64 = base64.b64encode(result).decode('utf-8')
                     document_data = pdf_base64
                     document_type = "pdf"
+                    print(f"✅ [MAIN] Successfully encoded binary data to base64")
                 except Exception as encode_err:
-                    print(f"⚠️ [MAIN] Error encoding binary data: {encode_err}")
+                    print(f"❌ [MAIN] Error encoding binary data: {encode_err}")
                     document_data = str(result)
                     document_type = "markdown"
-
-            # Default: treat as markdown/plain text string
+            
+            # Handle None or other types
             else:
-                print("📝 [MAIN] Treating workflow output as markdown/text content")
-                document_data = str(result)
+                print(f"⚠️ [MAIN] Unexpected result type: {type(result)}")
+                document_data = str(result) if result is not None else "No content generated"
                 document_type = "markdown"
-        except Exception as encode_err:
-            print(f"❌ [MAIN] Error normalizing document output: {encode_err}")
-            document_data = str(result) if result is not None else "No content generated"
+                
+        except Exception as process_err:
+            print(f"❌ [MAIN] Error processing workflow output: {process_err}")
+            import traceback
+            print(f"❌ [MAIN] Processing error traceback: {traceback.format_exc()}")
+            document_data = str(result) if result is not None else "Error processing workflow output"
             document_type = "markdown"
 
         print(f"📄 [MAIN] Document payload length: {len(document_data) if document_data else 0} characters")
@@ -556,18 +615,29 @@ async def login(request: Request):
                 print(f"⚠️ [LOGIN] Form parsing error: {form_err}")
                 raise HTTPException(status_code=400, detail="Invalid request format")
         
-        # Simple hardcoded authentication (you can replace with proper auth later)
-        if not username:
+        # Input validation
+        if not username or len(username.strip()) == 0:
             raise HTTPException(status_code=400, detail="Username required")
-        if not password:
+        if not password or len(password.strip()) == 0:
             raise HTTPException(status_code=400, detail="Password required")
+        
+        # Length limits for security
+        if len(username) > 100:
+            raise HTTPException(status_code=400, detail="Username too long")
+        if len(password) > 200:
+            raise HTTPException(status_code=400, detail="Password too long")
+        
+        print(f"🔐 [LOGIN] Authentication attempt for user: {username}")
         
         # Compare against environment-configured credentials
         valid_user = (username.lower() == (AUTH_USERNAME or "").lower())
         valid_pass = (password == (AUTH_PASSWORD or ""))
+        
         if valid_user and valid_pass:
+            print(f"✅ [LOGIN] Successful authentication for user: {username}")
             return {"status": "success", "message": "Login successful"}
         else:
+            print(f"❌ [LOGIN] Failed authentication attempt for user: {username}")
             raise HTTPException(status_code=401, detail="Invalid username or password")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

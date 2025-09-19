@@ -33,7 +33,7 @@ Please create a detailed itinerary in {language} that:
    - Factors in reasonable travel times between locations
    - Includes estimated costs where available
    - If budget information appears anywhere in the provided context, stay within the overall budget and include a short Budget breakdown section with flight and accommodation totals in the user's currency
-   - Includes actual images (not just links) for the sights and hotels - embed them directly in the itinerary using markdown image syntax ![alt text](image_url)
+   - DO NOT include raw image URLs or broken links in the itinerary text - images will be processed separately
    - Tailors activities to traveler types (child-friendly, senior-friendly, etc.)
    - Considers special needs like stroller accessibility, wheelchair accessibility, etc.
 5. Includes a safety section with:
@@ -51,6 +51,8 @@ Important correctness rules:
 - When flights_info contains no actual results, write a short note under Flights indicating no results and proceed without flight specifics.
 - Consider traveler information when making recommendations
 - Include safety information and current travel advisories when available
+- NEVER include image URLs, links, or broken URLs in the itinerary content - especially not repetitive googleusercontent.com URLs
+- Focus on text content only - images will be handled separately
 
 The full itinerary in markdown following the user's request:
 """
@@ -103,8 +105,12 @@ def write_itinerary(
         print(f"📄 [GEMINI-ITINERARY] Generated itinerary length: {len(response.text)} characters")
         print(f"💬 [GEMINI-ITINERARY] Itinerary preview: {response.text[:200]}...")
 
+        # Clean up the response to remove any broken URLs or problematic links
+        cleaned_itinerary = clean_itinerary_content(response.text)
+        print("🧹 [GEMINI-ITINERARY] Itinerary content cleaned")
+        
         # Process the response to convert image links to proper markdown images
-        processed_itinerary = process_itinerary_images(response.text, flights_info, hotels_info, sights_info)
+        processed_itinerary = process_itinerary_images(cleaned_itinerary, flights_info, hotels_info, sights_info)
         print("🖼️  [GEMINI-ITINERARY] Images processed and embedded in itinerary")
 
         return processed_itinerary
@@ -112,6 +118,45 @@ def write_itinerary(
     except Exception as e:
         print(f"❌ [GEMINI-ITINERARY] Error: {str(e)}")
         return f"Error generating itinerary with Gemini: {str(e)}"
+
+
+def clean_itinerary_content(itinerary_text: str) -> str:
+    """Clean up itinerary content by removing broken URLs and problematic links"""
+    import re
+    
+    # Remove broken Google User Content URLs
+    broken_url_patterns = [
+        r'https://lh3\.googleusercontent\.com/gps-cs-s/[^\s\)]*',
+        r'https://[^\s]*googleusercontent\.com/gps-cs-s/[^\s\)]*',
+        r'\[.*?\]\(https://lh3\.googleusercontent\.com/gps-cs-s/[^\)]*\)',
+        r'brw-[A-Za-z0-9_-]*',  # Remove broken URL fragments
+    ]
+    
+    cleaned_text = itinerary_text
+    for pattern in broken_url_patterns:
+        # Remove the broken URLs
+        cleaned_text = re.sub(pattern, '', cleaned_text)
+        print(f"🧹 [CLEAN-ITINERARY] Removed broken URLs matching pattern: {pattern}")
+    
+    # Remove excessive newlines created by URL removal
+    cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
+    
+    # Remove lines that only contain URL fragments or are suspiciously long
+    lines = cleaned_text.split('\n')
+    filtered_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        # Skip lines that are just URL fragments or extremely long (likely broken URLs)
+        if (len(line) > 200 and 'http' in line) or line.startswith('brw-') or 'ZAxdA-eob4MR40Zy' in line:
+            print(f"🧹 [CLEAN-ITINERARY] Removed suspicious line: {line[:100]}...")
+            continue
+        filtered_lines.append(line)
+    
+    cleaned_text = '\n'.join(filtered_lines)
+    
+    print(f"🧹 [CLEAN-ITINERARY] Cleaned itinerary: {len(itinerary_text)} → {len(cleaned_text)} characters")
+    return cleaned_text
 
 
 def process_itinerary_images(itinerary_text: str, flights_info: str, hotels_info: str, sights_info: str) -> str:
@@ -148,8 +193,33 @@ def process_itinerary_images(itinerary_text: str, flights_info: str, hotels_info
 
 
 def extract_image_urls_from_data(hotels_info: str, sights_info: str) -> dict:
-    """Extract image URLs from hotels and sights data"""
+    """Extract image URLs from hotels and sights data, filtering out broken URLs"""
     image_urls = {}
+
+    def is_valid_image_url(url: str) -> bool:
+        """Check if URL is a valid, accessible image URL"""
+        if not url or url == "N/A" or not url.startswith("http"):
+            return False
+        
+        # Filter out known problematic URL patterns
+        problematic_patterns = [
+            'googleusercontent.com/gps-cs-s/',  # Broken Google User Content URLs
+            'lh3.googleusercontent.com/gps-cs-s/',  # Specific broken pattern from the screenshot
+            'brw-', # Broken URL fragments
+            'ZAxdA-eob4MR40Zy'  # Specific broken URL pattern
+        ]
+        
+        for pattern in problematic_patterns:
+            if pattern in url:
+                print(f"🚫 [EXTRACT-IMAGES] Filtering out problematic URL containing '{pattern}': {url[:100]}...")
+                return False
+        
+        # Check for reasonable URL length (broken URLs tend to be extremely long)
+        if len(url) > 500:
+            print(f"🚫 [EXTRACT-IMAGES] Filtering out overly long URL: {url[:100]}...")
+            return False
+            
+        return True
 
     # Extract hotel images
     if "Image:" in hotels_info:
@@ -161,9 +231,9 @@ def extract_image_urls_from_data(hotels_info: str, sights_info: str) -> dict:
                 current_hotel = line
             elif line.startswith("Image:") and current_hotel:
                 image_url = line.replace("Image:", "").strip()
-                if image_url and image_url != "N/A" and image_url.startswith("http"):
+                if is_valid_image_url(image_url):
                     image_urls[f"🏨 {current_hotel}"] = image_url
-                    print(f"🖼️  [EXTRACT-IMAGES] Found hotel image: {current_hotel}")
+                    print(f"🖼️  [EXTRACT-IMAGES] Found valid hotel image: {current_hotel}")
 
     # Extract sights images
     if "Image:" in sights_info:
@@ -175,9 +245,9 @@ def extract_image_urls_from_data(hotels_info: str, sights_info: str) -> dict:
                 current_sight = line
             elif line.startswith("Image:") and current_sight:
                 image_url = line.replace("Image:", "").strip()
-                if image_url and image_url != "N/A" and image_url.startswith("http"):
+                if is_valid_image_url(image_url):
                     image_urls[f"📍 {current_sight}"] = image_url
-                    print(f"🖼️  [EXTRACT-IMAGES] Found sight image: {current_sight}")
+                    print(f"🖼️  [EXTRACT-IMAGES] Found valid sight image: {current_sight}")
 
-    print(f"🖼️  [EXTRACT-IMAGES] Total images extracted: {len(image_urls)}")
+    print(f"🖼️  [EXTRACT-IMAGES] Total valid images extracted: {len(image_urls)}")
     return image_urls

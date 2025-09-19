@@ -20,7 +20,7 @@
 ## ✨ Features
 
 ### 🧠 **AI-Powered Intelligence**
-- **Gemini 2.5 Flash Integration**: Advanced AI for personalized trip recommendations with grounded data retrieval
+- **Gemini models Integration**: Advanced AI for personalized trip recommendations with grounded data retrieval
 - **Multi-Language Support**: 11 languages including English, Hindi, Spanish, French, German, Italian, Portuguese, Japanese, Korean, Chinese, and Arabic
 - **Smart Itinerary Generation**: Context-aware travel planning based on your preferences
 - **Grounded Flight Search**: Advanced flight search with citation-based recommendations
@@ -146,7 +146,6 @@ uvicorn.run(app, host="0.0.0.0", port=8080)
 - **Children Under 5**: Number of toddlers (0-10)
 
 #### 2.2. **Special Options**
-- **Itinerary-First Planning**: Prioritize itinerary over flight selection
 - **Toddler-Friendly**: Include toddler-friendly activities and accommodations
 - **Senior-Friendly**: Include senior citizen-friendly options
 - **Safety Check**: Include travel safety information and advisories
@@ -280,6 +279,7 @@ POST /plan-trip
 ```
 
 **Request Body:**
+
 ```json
 {
   "from_city": "New York",
@@ -302,7 +302,6 @@ POST /plan-trip
     "senior_friendly": false,
     "direct_flights_only": false
   },
-  "itinerary_first": false,
   "consider_toddler_friendly": false,
   "consider_senior_friendly": false,
   "safety_check": true,
@@ -311,6 +310,7 @@ POST /plan-trip
 ```
 
 **Response:**
+
 ```json
 {
   "status": "success",
@@ -341,16 +341,19 @@ POST /plan-trip
 ### Other Endpoints
 
 #### Safety Check
+
 ```http
 POST /safety-check
 ```
 
 #### Grounded Flights
+
 ```http
 POST /grounded-flights
 ```
 
 #### Authentication
+
 ```http
 POST /login
 ```
@@ -359,7 +362,7 @@ POST /login
 
 ## 🐳 Docker Deployment
 
-```bash
+```sh
 # Build the image
 docker build -t journezy-trip-planner .
 
@@ -373,7 +376,7 @@ docker run -p 8000:8000 --env-file .env journezy-trip-planner
 
 Run the application locally:
 
-```bash
+```sh
 python run.py
 ```
 
