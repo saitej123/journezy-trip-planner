@@ -9,10 +9,8 @@
 
 **Your Personal AI-Powered Travel Planning Assistant**
 
-*Plan your dream trips with intelligent recommendations, real-time data, and seamless booking integration*
+*Plan your dream trips with intelligent recommendations, real-time data, and seamless travel planning*
 
-🌐 **[Live Demo](https://journezy-trip-planner-217752441008.asia-south1.run.app/)** | 
-[🚀 Features](#-features) • [📋 Prerequisites](#-prerequisites) • [⚡ Quick Start](#-quick-start) • [🔧 Configuration](#-configuration) • [📖 Usage](#-usage) 
 </div>
 
 ---
@@ -20,65 +18,53 @@
 ## ✨ Features
 
 ### 🧠 **AI-Powered Intelligence**
-- **Gemini models Integration**: Advanced AI for personalized trip recommendations with grounded data retrieval
+- **Gemini AI Integration**: Advanced AI for personalized trip recommendations
 - **Multi-Language Support**: 11 languages including English, Hindi, Spanish, French, German, Italian, Portuguese, Japanese, Korean, Chinese, and Arabic
 - **Smart Itinerary Generation**: Context-aware travel planning based on your preferences
-- **Grounded Flight Search**: Advanced flight search with citation-based recommendations
+- **Real-time Data**: Live flight and hotel information with pricing
 
 ### 🛫 **Comprehensive Travel Planning**
-- **Real-time Flight Search**: Live flight data with pricing and availability
-- **Hotel Recommendations**: Curated accommodation options with ratings, amenities, and location scores
-- **Places to Visit**: Must-see attractions and hidden gems with detailed descriptions
-- **Detailed Itineraries**: Day-by-day plans with activities, timings, and recommendations
-- **Safety Checks**: Travel safety information and advisories for destinations
+- **Flight Search**: Real-time flight data with pricing and availability
+- **Hotel Recommendations**: Curated accommodations with ratings and amenities
+- **Places to Visit**: Must-see attractions and hidden gems
+- **Detailed Itineraries**: Day-by-day plans with activities and timings
+- **Safety Information**: Travel safety advisories for destinations
 
-### 👥 **Advanced Traveler Support**
-- **Multi-Traveler Planning**: Support for adults, children, seniors, and children under 5
-- **Accessibility Features**: Senior-friendly and toddler-friendly options
-- **Flight Preferences**: Customizable options for red-eye flights, early morning departures, and direct flights
-- **Special Considerations**: Child-friendly and senior-friendly activity recommendations
+### 👥 **Smart Traveler Support**
+- **Multi-Traveler Planning**: Adults, children, seniors, and toddlers
+- **Smart Defaults**: Automatic selection of child-friendly or senior-friendly options
+- **Flight Timing Preferences**: 
+  - Child-friendly times (10 AM - 6 PM)
+  - Senior-friendly times (9 AM - 4 PM)
+  - Red-eye and early morning flight avoidance
+- **Accessibility Features**: Toddler and senior-friendly accommodations
 
 ### 💰 **Budget Management**
 - **Multi-Currency Support**: USD and INR with real-time pricing
-- **Budget-Aware Planning**: AI considers your budget constraints across all recommendations
-- **Cost Optimization**: Smart recommendations within your price range
-- **Transparent Pricing**: Clear price breakdown for flights, hotels, and activities
+- **Budget-Aware Planning**: AI considers your budget constraints
+- **Transparent Pricing**: Clear cost breakdown
 
 ### 🎨 **Modern User Experience**
-- **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
-- **Beautiful UI**: Clean, modern interface with smooth animations and AOS effects
-- **Real-time Updates**: Live data and instant recommendations
-- **Interactive Elements**: Tabbed interface for flights, hotels, places, and itinerary
-- **Form Validation**: Real-time input validation with user feedback
-
-### 📱 **Booking Integration**
-- **EaseMyTrip Integration**: Direct booking links for flights and hotels
-- **Pre-filled Search**: Automatic form population with your travel details
-- **External Links**: Seamless redirection to booking platforms with search parameters
-
-### 📄 **Document Generation & Export**
-- **PDF Download**: Generate and download complete itineraries as PDF documents
-- **Markdown Support**: Flexible document formatting with markdown parsing
-- **Print-Ready**: Professional layouts for offline reference
-- **Client-side PDF Generation**: Fast PDF creation using jsPDF library
+- **Responsive Design**: Works on desktop, tablet, and mobile
+- **Beautiful Interface**: Clean, modern UI with smooth animations
+- **Enhanced Date Validation**: Future-only date selection with smart adjustments
+- **Real-time Form Validation**: Instant feedback and validation
+- **PDF Export**: Download complete itineraries
 
 ---
 
 ## 📋 Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-- **Python 3.8+** 
+- **Python 3.8+**
 - **pip** (Python package installer)
 - **Git** (for cloning the repository)
 
-### Environment Variables
-Create a `.env` file in the project root with the following variables:
+### Required API Keys
+Create a `.env` file in the project root:
 
 ```env
-# Add your API keys here
 GOOGLE_API_KEY=your_google_api_key_here
-SERPAPI_KEY=your_key
+SERPAPI_KEY=your_serpapi_key_here
 ```
 
 ---
@@ -100,12 +86,13 @@ pip install -r requirements.txt
 
 ### 3. Set Up Environment
 
-Create a `.env` file in the project root with your API keys:
+Create a `.env` file with your API keys:
 
 ```sh
-# Create the .env file with your configuration
 nano .env
 ```
+
+Add the required API keys as shown in the prerequisites section.
 
 ### 4. Run the Application
 
@@ -113,131 +100,100 @@ nano .env
 python main.py
 ```
 
-### Server Configuration
-The application runs on `http://localhost:8000` by default. To change the port or host:
-
-```python
-# In main.py, modify the uvicorn.run() call
-uvicorn.run(app, host="0.0.0.0", port=8080)
-```
+The application will be available at `http://localhost:8000`
 
 ---
 
 ## 📖 Usage
 
-### 1. **Login**
-- Navigate to the application URL
-- Enter your credentials (default: `journezy` / `Journezy2025!`)
-- Click "Login" to access the trip planner
+### 1. **Access the Application**
+- Navigate to `http://localhost:8000`
+- Login with credentials: `journezy` / `Journezy2025!`
 
 ### 2. **Plan Your Trip**
-- **From City**: Enter your departure city
-- **To City**: Enter your destination city
-- **Travel Dates**: Select start and end dates
-- **Language**: Choose your preferred language (11 languages supported)
-- **Currency**: Select USD or INR
-- **Budget**: Enter your total trip budget (optional)
+- **Destinations**: Enter from and to cities
+- **Travel Dates**: Select start and end dates (future dates only)
+- **Language & Currency**: Choose from 11 languages and 2 currencies
+- **Budget**: Enter optional budget amount
 
-#### 2.1. **Traveler Information**
-- **Adults**: Number of adult travelers (1-10)
-- **Children**: Number of children (0-10)
-- **Seniors**: Number of senior citizens 65+ (0-10)
-- **Children Under 5**: Number of toddlers (0-10)
+### 3. **Traveler Information**
+- **Adults**: 1-10 travelers
+- **Children**: 0-10 (ages 5-17)
+- **Seniors**: 0-10 (ages 65+)
+- **Children Under 5**: 0-10 toddlers
 
-#### 2.2. **Special Options**
-- **Toddler-Friendly**: Include toddler-friendly activities and accommodations
-- **Senior-Friendly**: Include senior citizen-friendly options
-- **Safety Check**: Include travel safety information and advisories
+### 4. **Special Options**
+- **Toddler-Friendly**: Automatically selected when children under 5 are added
+- **Senior-Friendly Options**: Automatically selected when seniors are added
+- **Safety Check**: Include travel safety information
 
-#### 2.3. **Flight Preferences**
-- **Avoid Red-Eye Flights**: Skip flights departing 10 PM - 6 AM
-- **Avoid Early Morning**: Skip flights before 8 AM
-- **Child-Friendly Times**: Prefer mid-day flights (10 AM - 6 PM)
-- **Senior-Friendly Times**: Prefer comfortable flight times
-- **Direct Flights Only**: Prefer non-stop flights
+### 5. **Flight Preferences**
+- **Timing Options**:
+  - Child-friendly times (10 AM - 6 PM) - ideal for families
+  - Senior-friendly times (9 AM - 4 PM) - comfortable scheduling
+  - *Note: These options are mutually exclusive*
+- **Avoidance Options**:
+  - Red-eye flights (10 PM - 6 AM)
+  - Early morning flights (before 8 AM)
+- **Flight Type**: Direct flights only option
 
-- **Additional Instructions**: Add any specific requirements
-
-### 3. **Generate Itinerary**
+### 6. **Generate & Review**
 - Click "Generate Your Perfect Itinerary"
-- Wait for AI processing (usually 30-60 seconds with 5-minute timeout)
-- Review the generated recommendations with real-time data
+- Review results in organized tabs:
+  - **Itinerary**: Complete day-by-day plan
+  - **Flights**: Flight options with pricing
+  - **Hotels**: Accommodation recommendations
+  - **Places**: Attractions and activities
 
-### 4. **Explore Results**
-- **Itinerary Tab**: See your complete day-by-day plan with markdown formatting
-- **Flights Tab**: View flight options with pricing, timing, and direct booking links
-- **Hotels Tab**: Browse accommodation recommendations with ratings and amenities
-- **Places Tab**: Discover attractions and activities with descriptions and ratings
-
-### 5. **Book Your Trip**
-- Click "Book on EaseMyTrip" for flights and hotels
-- Links open in new tabs with pre-filled search parameters based on your trip details
-- Complete your bookings on the external platform
-
-### 6. **Download Itinerary**
-- Click "Download PDF" to generate and save your complete itinerary
-- Professional PDF layout with trip details and generated content
-- Share with travel companions or keep for offline reference
+### 7. **Export**
+- Download complete itinerary as PDF
+- Professional layout for sharing or offline use
 
 ---
-
 
 ## 🏗️ Architecture
 
 ```
 journezy-trip-planner/
-├── 📁 agents/                 # AI agents for different tasks
-│   ├── deligator.py          # Tour information extraction and delegation
-│   └── itinerary_writer.py   # AI-powered itinerary generation
+├── 📁 agents/                 # AI agents for trip planning
+│   ├── deligator.py          # Tour information extraction
+│   └── itinerary_writer.py   # Itinerary generation
 ├── 📁 static/                # Frontend assets
-│   ├── css/style.css         # Comprehensive styling and themes
-│   ├── js/main.js           # Frontend logic with AOS animations
-│   ├── images/              # Logo and visual assets
-│   └── login.html           # Authentication page
+│   ├── css/style.css         # Enhanced UI styling
+│   ├── js/main.js           # Smart defaults & validation logic
+│   └── images/              # Logo and assets
 ├── 📁 templates/             # HTML templates
 │   └── index.html           # Main application interface
-├── 📁 tools/                 # Utility tools and services
-│   ├── flights.py           # Flight search integration
-│   ├── hotels.py            # Hotel search integration
-│   └── places.py            # Places and attractions search
-├── 📄 main.py               # FastAPI application with comprehensive APIs
-├── 📄 workflow.py           # Main workflow orchestration with timeout handling
-├── 📄 grounding_service.py  # Grounded data retrieval and citation services
-├── 📄 run.py                # Application runner
-├── 📄 requirements.txt      # Python dependencies
-├── 📄 Dockerfile           # Container configuration
-├── 📄 LICENSE              # MIT license
-└── 📄 README.md            # Comprehensive documentation
+├── 📁 tools/                 # Search integrations
+│   ├── flights.py           # Flight search
+│   ├── hotels.py            # Hotel search
+│   └── places.py            # Places search
+├── 📄 main.py               # FastAPI application
+├── 📄 workflow.py           # Trip planning workflow
+├── 📄 requirements.txt      # Dependencies
+└── 📄 README.md            # Documentation
 ```
 
-### 🔧 **Key Components**
+### Key Components
 
-#### **Backend Architecture**
-- **FastAPI Application**: High-performance async web framework
-- **Gemini 2.5 Flash Integration**: Advanced AI language model
-- **Workflow Engine**: Orchestrates trip planning pipeline
-- **Grounding Service**: Citation-based data retrieval
-- **Tool Integration**: SerpAPI for real-time travel data
+#### **Backend**
+- **FastAPI**: High-performance web framework
+- **Gemini 2.5 Flash**: Advanced AI language model
+- **Workflow Engine**: Trip planning orchestration
+- **SerpAPI Integration**: Real-time travel data
 
-#### **Frontend Architecture**
+#### **Frontend**
 - **Responsive Design**: Bootstrap 5 with custom CSS
-- **Interactive UI**: AOS animations and smooth transitions
-- **Real-time Validation**: Client-side form validation
-- **PDF Generation**: Client-side PDF creation with jsPDF
-- **Tab Navigation**: Organized content presentation
+- **Smart Defaults**: Automatic option selection based on travelers
+- **Enhanced Date Validation**: Future-only dates with smart adjustments
+- **Real-time Validation**: Instant form feedback
+- **PDF Generation**: Client-side document creation
 
-#### **API Endpoints**
-- `POST /plan-trip`: Comprehensive trip planning with all features
-- `POST /grounded-flights`: Citation-based flight recommendations
-- `POST /safety-check`: Travel safety information
-- `POST /login`: Authentication endpoint
-- `GET /app`: Main application interface
+---
 
 ## 🔧 Configuration
 
 ### Environment Variables
-
-Create a `.env` file in the project root:
 
 ```env
 # Required API Keys
@@ -249,143 +205,50 @@ AUTH_USERNAME=journezy
 AUTH_PASSWORD=Journezy2025!
 ```
 
-### Advanced Configuration
-
-#### **Gemini AI Settings**
-- Model: `gemini-2.5-flash-lite` (latest version)
-- Temperature: Optimized for travel recommendations
-- Safety settings: Configured for travel content
-
-#### **SerpAPI Integration**
-- Real-time flight data
-- Hotel information with ratings
-- Places and attractions data
-- Currency-specific pricing
-
-#### **Timeout Settings**
-- Workflow timeout: 5 minutes
-- Individual API calls: 30 seconds
-- Frontend request timeout: 5 minutes
+### Advanced Settings
+- **AI Model**: Gemini 2.5 Flash (latest)
+- **Workflow Timeout**: 5 minutes
+- **Multi-language**: 11 languages supported
+- **Currency Support**: USD and INR
 
 ---
 
-## 🚀 API Reference
+## 🚀 API Endpoints
 
-### Main Trip Planning Endpoint
-
+### Main Trip Planning
 ```http
 POST /plan-trip
 ```
 
-**Request Body:**
-
-```json
-{
-  "from_city": "New York",
-  "to_city": "Paris",
-  "start_date": "2025-06-01",
-  "end_date": "2025-06-07",
-  "language": "en",
-  "currency": "USD",
-  "budget_amount": 3000,
-  "travelers": {
-    "adults": 2,
-    "children": 1,
-    "seniors": 0,
-    "children_under_5": 0
-  },
-  "flight_preferences": {
-    "avoid_red_eye": true,
-    "avoid_early_morning": false,
-    "child_friendly": true,
-    "senior_friendly": false,
-    "direct_flights_only": false
-  },
-  "consider_toddler_friendly": false,
-  "consider_senior_friendly": false,
-  "safety_check": true,
-  "additional_instructions": "Budget-friendly options preferred"
-}
-```
-
-**Response:**
-
-```json
-{
-  "status": "success",
-  "message": "Trip planned successfully",
-  "itinerary": {
-    "flights": {
-      "data": "formatted flight information",
-      "formatted": true
-    },
-    "hotels": {
-      "data": "formatted hotel information", 
-      "formatted": true
-    },
-    "places": {
-      "data": "formatted places information",
-      "formatted": true
-    },
-    "itinerary": {
-      "data": "complete markdown itinerary",
-      "formatted": true
-    }
-  },
-  "document": "base64_encoded_pdf_or_markdown",
-  "document_type": "pdf|markdown"
-}
-```
-
-### Other Endpoints
-
-#### Safety Check
-
-```http
-POST /safety-check
-```
-
-#### Grounded Flights
-
-```http
-POST /grounded-flights
-```
-
-#### Authentication
-
-```http
-POST /login
-```
+### Additional Endpoints
+- `POST /grounded-flights` - Citation-based flight search
+- `POST /safety-check` - Travel safety information
+- `POST /login` - Authentication
+- `GET /app` - Main application interface
+- `GET /health` - System health check
 
 ---
 
-## 🐳 Docker Deployment
+## 🎯 Recent Updates
 
-```sh
-# Build the image
-docker build -t journezy-trip-planner .
+### Enhanced User Experience
+- **Optimized Logo**: Larger size with minimal padding for better brand visibility
+- **Smart Date Selection**: Future-only dates with automatic end date adjustment
+- **Flight Timing Clarity**: Specific time ranges for child-friendly (10 AM - 6 PM) and senior-friendly (9 AM - 4 PM) options
+- **Improved Validation**: Real-time form validation with user feedback
+- **Clean Interface**: Removed test elements for production-ready appearance
 
-# Run the container
-docker run -p 8000:8000 --env-file .env journezy-trip-planner
-```
-
----
-
-## 🧪 Testing
-
-Run the application locally:
-
-```sh
-python run.py
-```
-
-The application will be available at `http://localhost:8000`
+### Smart Features
+- **Automatic Defaults**: Child and senior-friendly options auto-select based on traveler composition
+- **Mutual Exclusion**: Prevents conflicting flight timing preferences
+- **Enhanced Accessibility**: Better support for families and seniors
+- **Professional Polish**: Streamlined UI with consistent styling
 
 ---
 
 <div align="center">
 
-**Made by the WNS Journezy Team**
+**Made with ❤️ for better travel planning**
 
 [⬆ Back to Top](#-journezy-trip-planner)
 
