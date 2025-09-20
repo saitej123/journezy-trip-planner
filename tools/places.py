@@ -108,16 +108,16 @@ def find_places_to_visit(
     # Clean and normalize location
     location = location.strip()
     
-    # Base search query
-    base_query = f"top sights in {location}"
+    # Create comprehensive search query based on traveler needs
+    base_query = f"best attractions and places to visit in {location}"
     
-    # Add specific considerations
+    # Add specific traveler requirements for more targeted results
     if toddler_friendly and senior_friendly:
-        base_query += " family friendly accessible attractions"
+        base_query += " family friendly accessible multi-generational attractions stroller wheelchair"
     elif toddler_friendly:
-        base_query += " toddler friendly attractions playgrounds"
+        base_query += " family kids children toddler friendly attractions playgrounds interactive exhibits"
     elif senior_friendly:
-        base_query += " senior friendly accessible attractions"
+        base_query += " senior accessible wheelchair friendly attractions museums cultural sites easy walking"
     
     params = {
         "api_key": SERPAPI_KEY,

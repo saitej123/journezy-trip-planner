@@ -78,14 +78,32 @@ def find_hotels(
 
     SERPAPI_KEY = os.getenv("SERPAPI_KEY")
     
-    # Modify search query based on requirements
-    search_query = city
+    # Create comprehensive search query based on requirements
+    search_query = f"{city} hotels"
+    
+    # Add specific amenity requirements
+    amenity_requirements = []
     if toddler_friendly and senior_friendly:
-        search_query += " family friendly accessible hotels"
+        amenity_requirements.extend([
+            "family friendly", "accessible", "elevator access", 
+            "kids amenities", "cribs available", "high chairs",
+            "wheelchair accessible", "grab bars", "ground floor rooms"
+        ])
     elif toddler_friendly:
-        search_query += " family friendly hotels with kids amenities"
+        amenity_requirements.extend([
+            "family friendly", "kids amenities", "cribs available", 
+            "high chairs", "children's pool", "playground",
+            "baby equipment", "stroller accessible"
+        ])
     elif senior_friendly:
-        search_query += " accessible hotels senior friendly"
+        amenity_requirements.extend([
+            "accessible", "elevator access", "wheelchair accessible",
+            "grab bars", "ground floor rooms", "senior friendly",
+            "mobility assistance", "comfortable seating"
+        ])
+    
+    if amenity_requirements:
+        search_query += f" {' '.join(amenity_requirements[:5])}"  # Limit to avoid overly long queries
     
     params = {
         "engine": "google_hotels",

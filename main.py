@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from dotenv import load_dotenv
 from workflow import TourPlannerWorkflow
 import os
@@ -102,8 +102,19 @@ class TripRequest(BaseModel):
         description="Perform safety check for travel destination"
     )
 
+    @model_validator(mode='before')
+    @classmethod
+    def validate_required_objects(cls, values):
+        """Ensure required objects are never None"""
+        if isinstance(values, dict):
+            if values.get('flight_preferences') is None:
+                values['flight_preferences'] = {}
+            if values.get('travelers') is None:
+                values['travelers'] = {}
+        return values
+
     def get_dates(self) -> tuple[str, str]:
-        """Returns normalized start and end dates"""
+        """Returns normalized start and end dates with validation"""
         today = datetime.now().date()
         
         # If no start_date provided, use today
@@ -111,71 +122,183 @@ class TripRequest(BaseModel):
             start = today
         else:
             start = datetime.strptime(self.start_date, "%Y-%m-%d").date()
+            # Validate start date is not in the past
+            if start < today:
+                start = today  # Auto-correct to today if in the past
         
         # If no end_date provided, use start + 7 days
         if not self.end_date:
             end = start + timedelta(days=7)
         else:
             end = datetime.strptime(self.end_date, "%Y-%m-%d").date()
+            # Validate end date is not before start date
+            if end < start:
+                end = start + timedelta(days=7)  # Auto-correct to start + 7 days
             
         return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
 
     def build_query(self) -> str:
-        """Builds a structured query from the input fields"""
-        query_parts = [f"Plan a trip from {self.from_city} to {self.to_city}"]
+        """Builds a comprehensive, structured query from the input fields with detailed context"""
         
         # Use get_dates() to ensure we have proper date strings
         start_date, end_date = self.get_dates()
-        if start_date and end_date:
-            query_parts.append(f"from {start_date} to {end_date}")
+        
+        # Calculate trip duration for intelligent planning
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            duration_days = (end_dt - start_dt).days
+        except Exception:
+            duration_days = 7  # Default fallback
+        
+        # Build comprehensive trip description
+        query_parts = []
+        
+        # 1. Basic trip structure with intelligent context
+        query_parts.append(f"Plan a comprehensive {duration_days}-day trip from {self.from_city} to {self.to_city}")
+        query_parts.append(f"from {start_date} to {end_date}")
 
-        # Add traveler information
-        traveler_info = []
+        # 2. Detailed traveler profile analysis
+        traveler_profile = []
+        total_travelers = 0
+        
         if self.travelers.adults > 0:
-            traveler_info.append(f"{self.travelers.adults} adult{'s' if self.travelers.adults > 1 else ''}")
-        if self.travelers.children > 0:
-            traveler_info.append(f"{self.travelers.children} child{'ren' if self.travelers.children > 1 else ''}")
-        if self.travelers.seniors > 0:
-            traveler_info.append(f"{self.travelers.seniors} senior citizen{'s' if self.travelers.seniors > 1 else ''}")
-        if self.travelers.children_under_5 > 0:
-            traveler_info.append(f"{self.travelers.children_under_5} child{'ren' if self.travelers.children_under_5 > 1 else ''} under 5 years old")
-        
-        if traveler_info:
-            query_parts.append(f"for {', '.join(traveler_info)}")
-
-        if self.budget_amount:
-            # Include concise budget context for downstream agents
-            query_parts.append(f"with an overall budget of {self.budget_amount} {self.currency or 'USD'}")
-
-        # Add special considerations
-        special_considerations = []
-        if self.consider_toddler_friendly:
-            special_considerations.append("toddler-friendly activities and accommodations")
-        if self.consider_senior_friendly:
-            special_considerations.append("senior citizen-friendly activities and accommodations")
-        
-        if special_considerations:
-            query_parts.append(f"considering {', '.join(special_considerations)}")
-
-        # Add flight preferences
-        flight_prefs = []
-        if self.flight_preferences.avoid_red_eye:
-            flight_prefs.append("avoid red-eye flights")
-        if self.flight_preferences.avoid_early_morning:
-            flight_prefs.append("avoid early morning flights (before 8 AM)")
-        if self.flight_preferences.child_friendly:
-            flight_prefs.append("child-friendly flight times")
-        if self.flight_preferences.senior_friendly:
-            flight_prefs.append("senior-friendly flight times")
-        if self.flight_preferences.direct_flights_only:
-            flight_prefs.append("direct flights only")
-        
-        if flight_prefs:
-            query_parts.append(f"with flight preferences: {', '.join(flight_prefs)}")
-
-        if self.additional_instructions:
-            query_parts.append(self.additional_instructions)
+            traveler_profile.append(f"{self.travelers.adults} adult{'s' if self.travelers.adults > 1 else ''}")
+            total_travelers += self.travelers.adults
             
+        if self.travelers.children > 0:
+            traveler_profile.append(f"{self.travelers.children} child{'ren' if self.travelers.children > 1 else ''}")
+            total_travelers += self.travelers.children
+            
+        if self.travelers.seniors > 0:
+            traveler_profile.append(f"{self.travelers.seniors} senior citizen{'s' if self.travelers.seniors > 1 else ''}")
+            total_travelers += self.travelers.seniors
+            
+        if self.travelers.children_under_5 > 0:
+            traveler_profile.append(f"{self.travelers.children_under_5} toddler{'s' if self.travelers.children_under_5 > 1 else ''} (under 5 years)")
+            total_travelers += self.travelers.children_under_5
+        
+        if traveler_profile:
+            query_parts.append(f"for a group of {total_travelers}: {', '.join(traveler_profile)}")
+
+        # 3. Trip characteristics and group dynamics
+        trip_characteristics = []
+        
+        # Determine trip type based on traveler composition
+        if self.travelers.children > 0 or self.travelers.children_under_5 > 0:
+            if self.travelers.seniors > 0:
+                trip_characteristics.append("multi-generational family trip")
+            else:
+                trip_characteristics.append("family trip with children")
+        elif self.travelers.seniors > 0:
+            trip_characteristics.append("senior-friendly travel experience")
+        elif self.travelers.adults == 2 and total_travelers == 2:
+            trip_characteristics.append("couples getaway")
+        elif self.travelers.adults > 2:
+            trip_characteristics.append("group travel experience")
+        
+        # Add duration context
+        if duration_days <= 3:
+            trip_characteristics.append("short city break")
+        elif duration_days <= 7:
+            trip_characteristics.append("week-long vacation")
+        elif duration_days <= 14:
+            trip_characteristics.append("extended holiday")
+        else:
+            trip_characteristics.append("long-term travel experience")
+        
+        if trip_characteristics:
+            query_parts.append(f"This is a {', '.join(trip_characteristics)}.")
+
+        # 4. Budget context with intelligence
+        if self.budget_amount and self.budget_amount > 0:
+            currency_symbol = "$" if (self.currency or "USD").upper() == "USD" else "₹"
+            per_person_budget = self.budget_amount / max(total_travelers, 1)
+            
+            # Determine budget category
+            budget_category = ""
+            if per_person_budget < 100:
+                budget_category = "budget-conscious"
+            elif per_person_budget < 500:
+                budget_category = "mid-range"
+            elif per_person_budget < 1500:
+                budget_category = "comfortable"
+            else:
+                budget_category = "luxury"
+            
+            query_parts.append(f"Total budget: {currency_symbol}{self.budget_amount:,.0f} {self.currency or 'USD'} ({budget_category} travel style, approximately {currency_symbol}{per_person_budget:,.0f} per person)")
+
+        # 5. Accessibility and special requirements
+        accessibility_needs = []
+        if self.consider_toddler_friendly:
+            accessibility_needs.extend([
+                "toddler-friendly accommodations with cribs and high chairs",
+                "stroller-accessible attractions and venues",
+                "child-safe environments and activities",
+                "family-friendly dining options with kids menus"
+            ])
+            
+        if self.consider_senior_friendly:
+            accessibility_needs.extend([
+                "senior-friendly accommodations with elevator access",
+                "wheelchair accessible attractions and venues",
+                "comfortable seating and rest areas",
+                "easy-to-navigate locations with minimal walking"
+            ])
+        
+        if accessibility_needs:
+            query_parts.append(f"Special requirements include: {', '.join(accessibility_needs)}")
+
+        # 6. Comprehensive flight preferences with reasoning
+        flight_requirements = []
+        if self.flight_preferences:
+            if self.flight_preferences.avoid_red_eye:
+                flight_requirements.append("avoid red-eye flights (departures between 10 PM - 6 AM) for better rest")
+            if self.flight_preferences.avoid_early_morning:
+                flight_requirements.append("avoid early morning departures (before 8 AM) for comfortable travel")
+            if self.flight_preferences.child_friendly:
+                flight_requirements.append("prioritize child-friendly flight times (mid-day departures 10 AM - 6 PM) with family seating")
+            if self.flight_preferences.senior_friendly:
+                flight_requirements.append("prefer senior-friendly flight times (10 AM - 4 PM) with assistance services available")
+            if self.flight_preferences.direct_flights_only:
+                flight_requirements.append("direct flights only to minimize travel fatigue and connection stress")
+        
+        if flight_requirements:
+            query_parts.append(f"Flight preferences: {', '.join(flight_requirements)}")
+
+        # 7. Safety and health considerations
+        safety_notes = []
+        if self.safety_check:
+            safety_notes.append("include current travel safety information and health advisories")
+            
+        if self.travelers.seniors > 0:
+            safety_notes.append("provide senior health and mobility considerations")
+            
+        if self.travelers.children > 0 or self.travelers.children_under_5 > 0:
+            safety_notes.append("include child safety guidelines and family emergency procedures")
+        
+        if safety_notes:
+            query_parts.append(f"Safety requirements: {', '.join(safety_notes)}")
+
+        # 8. Additional context and preferences
+        if self.additional_instructions:
+            query_parts.append(f"Additional preferences: {self.additional_instructions}")
+
+        # 9. Planning intelligence requirements
+        intelligence_requirements = [
+            "create a balanced itinerary with cultural experiences, local cuisine, and authentic attractions",
+            "optimize logistics to minimize travel time between activities",
+            "include weather considerations and seasonal recommendations",
+            "provide local transportation guidance and accessibility information",
+            "suggest authentic dining experiences suitable for the traveler profile"
+        ]
+        
+        if duration_days >= 5:
+            intelligence_requirements.append("include at least one rest/flexibility day for spontaneous activities")
+            
+        query_parts.append(f"Planning requirements: {'; '.join(intelligence_requirements)}")
+
         return " ".join(query_parts)
 
 class TripResponse(BaseModel):
@@ -251,6 +374,10 @@ async def plan_trip(request: TripRequest):
         if not request.from_city or not request.to_city:
             raise HTTPException(status_code=400, detail="Both from_city and to_city are required")
         
+        # Validate city names are not empty after stripping
+        if not request.from_city.strip() or not request.to_city.strip():
+            raise HTTPException(status_code=400, detail="City names cannot be empty")
+        
         if request.from_city.strip().lower() == request.to_city.strip().lower():
             raise HTTPException(status_code=400, detail="Departure and destination cities cannot be the same")
 
@@ -263,6 +390,10 @@ async def plan_trip(request: TripRequest):
         import asyncio
         try:
             print("🚀 [PLAN-TRIP] Starting workflow execution...")
+            print(f"📊 [PLAN-TRIP] Smart defaults: toddler_friendly={request.consider_toddler_friendly}, senior_friendly={request.consider_senior_friendly}")
+            print(f"🧳 [PLAN-TRIP] Travelers: {request.travelers.adults} adults, {request.travelers.children} children, {request.travelers.seniors} seniors")
+            print(f"✈️  [PLAN-TRIP] Flight prefs: child_friendly={request.flight_preferences.child_friendly}, senior_friendly={request.flight_preferences.senior_friendly}")
+            
             result = await asyncio.wait_for(
                 workflow.run(
                     query=query,
@@ -294,7 +425,7 @@ async def plan_trip(request: TripRequest):
         except Exception as workflow_err:
             print(f"❌ [PLAN-TRIP] Workflow error: {workflow_err}")
             import traceback
-            print(f"❌ [PLAN-TRIP] Full traceback: {traceback.format_exc()}")
+            print("❌ [PLAN-TRIP] Full traceback: " + traceback.format_exc())
             return TripResponse(
                 status="error",
                 message=f"Trip planning failed: {str(workflow_err)}",
@@ -648,6 +779,48 @@ async def log_download():
     print("📥 [SERVER-LOG] PDF download initiated from client")
     print("🎯 [SERVER-LOG] Client requested PDF download")
     return {"status": "logged", "message": "Download logged"}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint to verify backend status"""
+    try:
+        # Check critical components
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "components": {
+                "workflow": "ok",
+                "agents": "ok",
+                "tools": "ok",
+                "environment": "ok"
+            }
+        }
+        
+        # Test critical imports
+        try:
+            import workflow
+            import agents.deligator
+            import tools.flights
+            health_status["components"]["workflow"] = "ok"
+        except Exception as e:
+            health_status["components"]["workflow"] = f"error: {str(e)}"
+            health_status["status"] = "unhealthy"
+        
+        # Check environment variables
+        required_env = ["GOOGLE_API_KEY", "AUTH_USERNAME", "AUTH_PASSWORD"]
+        missing_env = [var for var in required_env if not os.getenv(var)]
+        if missing_env:
+            health_status["components"]["environment"] = f"missing: {', '.join(missing_env)}"
+            health_status["status"] = "degraded"
+        
+        return health_status
+        
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e)
+        }
 
 @app.get("/app")
 async def read_app():
