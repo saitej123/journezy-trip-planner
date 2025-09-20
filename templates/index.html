@@ -33,13 +33,7 @@
     <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <div class="logo-container">
-                    <img src="/static/images/logo.png" alt="Journezy Logo" class="navbar-logo">
-                    <div class="logo-text-container">
-                        <!-- <span class="logo-text"></span> -->
-                        <!-- <span class="logo-ai"></span> -->
-                    </div>
-                </div>
+                <img src="/static/images/logo.png" alt="Journezy Logo" class="navbar-logo">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -162,10 +156,10 @@
                         </div>
                     </div>
 
-                    <!-- Traveler Information Section -->
+                    <!-- Traveller Information Section -->
                     <div class="traveler-section mb-4" data-aos="fade-up" data-aos-delay="100">
                         <h4 class="mb-3 text-primary">
-                            <i class="fas fa-users me-2"></i>Traveler Information
+                            <i class="fas fa-users me-2"></i>Traveller Information
                         </h4>
                         <div class="row g-3">
                             <div class="col-md-3">
@@ -297,6 +291,10 @@
                         <h4 class="mb-3 text-primary">
                             <i class="fas fa-cog me-2"></i>Special Options
                         </h4>
+                        <div class="alert alert-success mb-3" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
+                            <i class="fas fa-magic me-2"></i>
+                            <strong>Smart Defaults:</strong> Options below are automatically selected when you add children or seniors to your trip.
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-check form-switch">
@@ -311,7 +309,7 @@
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" id="consider_senior_friendly" name="consider_senior_friendly">
                                     <label class="form-check-label" for="consider_senior_friendly">
-                                        <i class="fas fa-wheelchair me-2"></i>Senior-Friendly
+                                        <i class="fas fa-wheelchair me-2"></i>Senior-Friendly Options
                                     </label>
                                     <small class="form-text text-muted d-block">Include senior-friendly activities and accommodations</small>
                                 </div>
@@ -346,6 +344,10 @@
                         <h4 class="mb-3 text-primary">
                             <i class="fas fa-plane me-2"></i>Flight Preferences
                         </h4>
+                        <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>Flight Timing Preferences:</strong> Child-friendly (10 AM - 6 PM) and Senior-friendly (9 AM - 4 PM) times are mutually exclusive. Choose the option that best fits your travel group.
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-check form-switch">
@@ -371,7 +373,7 @@
                                     <label class="form-check-label" for="child_friendly">
                                         <i class="fas fa-child me-2"></i>Child-Friendly Times
                                     </label>
-                                    <small class="form-text text-muted d-block">Prefer mid-day flights (10 AM - 6 PM)</small>
+                                    <small class="form-text text-muted d-block">Prefer daytime flights (10 AM - 6 PM) ideal for families with children • Mutually exclusive with Senior-Friendly</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -380,7 +382,7 @@
                                     <label class="form-check-label" for="senior_friendly">
                                         <i class="fas fa-user-friends me-2"></i>Senior-Friendly Times
                                     </label>
-                                    <small class="form-text text-muted d-block">Prefer comfortable flight times</small>
+                                    <small class="form-text text-muted d-block">Prefer comfortable flight times (9 AM - 4 PM) avoiding early morning and late evening • Mutually exclusive with Child-Friendly</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -395,31 +397,70 @@
                         </div>
                     </div>
 
-                    <div class="row g-4" id="dateInputs">
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <input 
-                                    type="date" 
-                                    class="form-control" 
-                                    id="start_date"
-                                    
-                                    data-aos="fade-up"
-                                    data-aos-delay="200"
-                                >
-                                <label for="start_date">Start Date</label>
+                    <!-- Date Selection Section with Enhanced Validation -->
+                    <div class="date-selection-section mb-4" data-aos="fade-up" data-aos-delay="180">
+                        <h4 class="mb-3 text-primary">
+                            <i class="fas fa-calendar-alt me-2"></i>Travel Dates
+                        </h4>
+                        <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>Date Validation:</strong> Only future dates can be selected. End date must be after start date.
+                        </div>
+                        <div class="row g-4" id="dateInputs">
+                            <div class="col-md-6">
+                                <div class="date-input-container">
+                                    <div class="form-floating">
+                                        <input 
+                                            type="date" 
+                                            class="form-control" 
+                                            id="start_date"
+                                            name="start_date"
+                                            required
+                                            data-aos="fade-up"
+                                            data-aos-delay="200"
+                                            title="Select your departure date (minimum: today)"
+                                        >
+                                        <label for="start_date">
+                                            <i class="fas fa-plane-departure me-1"></i>Start Date
+                                        </label>
+                                        <div class="invalid-feedback">Please select a valid start date</div>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Departure date (minimum: today)
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="date-input-container">
+                                    <div class="form-floating">
+                                        <input 
+                                            type="date" 
+                                            class="form-control" 
+                                            id="end_date"
+                                            name="end_date"
+                                            required
+                                            data-aos="fade-up"
+                                            data-aos-delay="300"
+                                            title="Select your return date (must be after start date)"
+                                        >
+                                        <label for="end_date">
+                                            <i class="fas fa-plane-arrival me-1"></i>End Date
+                                        </label>
+                                        <div class="invalid-feedback">Please select a valid end date</div>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Return date (must be after start date)
+                                    </small>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <input 
-                                    type="date" 
-                                    class="form-control" 
-                                    id="end_date"
-                                    
-                                    data-aos="fade-up"
-                                    data-aos-delay="300"
-                                >
-                                <label for="end_date">End Date</label>
+                        <!-- Trip Duration Display -->
+                        <div id="tripDurationDisplay" class="mt-3" style="display: none;">
+                            <div class="alert alert-success" style="padding: 0.5rem 0.75rem; margin: 0;">
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Trip Duration:</strong> <span id="tripDurationText">0 days</span>
                             </div>
                         </div>
                     </div>
@@ -523,19 +564,30 @@
     
     <!-- Custom JavaScript -->
     <script src="/static/js/main.js"></script>
+    
+    <!-- Initialize date constraints immediately -->
+    <script>
+        // Set minimum date to today for start date only
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            const startDateInput = document.getElementById('start_date');
+            
+            if (startDateInput) {
+                startDateInput.min = today;
+                console.log('[DATE-INIT] Set start date minimum to:', today);
+                
+                // End date minimum will be set dynamically based on start date selection
+                console.log('[DATE-INIT] End date minimum will be set based on start date selection');
+            }
+        });
+    </script>
 
     <!-- Add before closing body tag -->
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-logo">
-                    <div class="logo-container footer-logo-wrapper">
-                        <img src="/static/images/logo.png" alt="Journezy Logo" class="footer-logo-img">
-                        <div class="logo-text-container">
-                            <!-- <span class="logo-text"></span> -->
-                            <!-- <span class="logo-ai"></span> -->
-                        </div>
-                    </div>
+                    <img src="/static/images/logo.png" alt="Journezy Logo" class="footer-logo-img">
                 </div>
                 <div class="footer-text">
                     <p>&copy; 2025 Journezy. All Rights Reserved.</p>

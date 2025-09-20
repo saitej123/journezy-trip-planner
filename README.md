@@ -252,7 +252,7 @@ AUTH_PASSWORD=Journezy2025!
 ### Advanced Configuration
 
 #### **Gemini AI Settings**
-- Model: `gemini-2.5-flash` (latest version)
+- Model: `gemini-2.5-flash-lite` (latest version)
 - Temperature: Optimized for travel recommendations
 - Safety settings: Configured for travel content
 

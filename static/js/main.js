@@ -129,7 +129,479 @@ document.addEventListener('DOMContentLoaded', function() {
         ai.style.fontWeight = '600';
     });
 
+    // Add logic for automatic toddler/senior friendly selection with a small delay
+    console.log('[SMART-DEFAULTS] DOM loaded, preparing traveler logic setup...');
+    // Setup traveller logic immediately
+    console.log('[SMART-DEFAULTS] Initializing traveller logic immediately...');
+    setupTravellerLogic();
+    
+    setTimeout(() => {
+        console.log('[SMART-DEFAULTS] Attempting to setup traveler logic (200ms delay)...');
+        setupTravellerLogic();
+        
+        // Test if elements are properly found
+        const testElements = {
+            children: document.getElementById('children'),
+            children_under_5: document.getElementById('children_under_5'),
+            seniors: document.getElementById('seniors'),
+            consider_toddler_friendly: document.getElementById('consider_toddler_friendly'),
+            consider_senior_friendly: document.getElementById('consider_senior_friendly'),
+            child_friendly: document.getElementById('child_friendly'),
+            senior_friendly: document.getElementById('senior_friendly')
+        };
+        
+        console.log('[SMART-DEFAULTS] Element check:', testElements);
+        
+        // Force trigger updates
+        if (window.updateFriendlyOptionsGlobal) {
+            console.log('[SMART-DEFAULTS] Force triggering initial update...');
+            window.updateFriendlyOptionsGlobal();
+            setTimeout(() => {
+                window.updateFriendlyOptionsGlobal();
+            }, 100);
+        }
+    }, 200);
+    
+    // Additional backup trigger
+    setTimeout(() => {
+        if (window.updateFriendlyOptionsGlobal) {
+            console.log('[SMART-DEFAULTS] Backup trigger (500ms)...');
+            window.updateFriendlyOptionsGlobal();
+        }
+    }, 500);
+
+    // Set up date validation with enhanced features
+    setupDateValidation();
+    
+    // Trigger initial validation after DOM is ready (less aggressive)
+    setTimeout(() => {
+        console.log('[DATE-VALIDATION] Performing initial validation check...');
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        if (startDateInput && endDateInput) {
+            // Only validate if dates already exist
+            if (startDateInput.value && endDateInput.value) {
+                startDateInput.dispatchEvent(new Event('change'));
+                console.log('[DATE-VALIDATION] Validated existing dates');
+            }
+        }
+    }, 300);
+
 });
+
+// Global variable to store the update function for debugging
+window.updateFriendlyOptionsGlobal = null;
+
+// Function to setup traveller logic
+function setupTravellerLogic() {
+    const childrenInput = document.getElementById('children');
+    const childrenUnder5Input = document.getElementById('children_under_5');
+    const seniorsInput = document.getElementById('seniors');
+    const toddlerFriendlyCheckbox = document.getElementById('consider_toddler_friendly');
+    const seniorFriendlyCheckbox = document.getElementById('consider_senior_friendly');
+    const childFriendlyFlightCheckbox = document.getElementById('child_friendly');
+    const seniorFriendlyFlightCheckbox = document.getElementById('senior_friendly');
+
+    // Check if all required elements exist
+    if (!childrenInput || !childrenUnder5Input || !seniorsInput || 
+        !toddlerFriendlyCheckbox || !seniorFriendlyCheckbox || 
+        !childFriendlyFlightCheckbox || !seniorFriendlyFlightCheckbox) {
+        console.warn('[SMART-DEFAULTS] Some form elements not found, smart defaults may not work');
+        return;
+    }
+
+    console.log('[SMART-DEFAULTS] Setting up traveller logic...');
+
+    function updateFriendlyOptions() {
+        const totalChildren = parseInt(childrenInput.value || 0) + parseInt(childrenUnder5Input.value || 0);
+        const totalSeniors = parseInt(seniorsInput.value || 0);
+
+        console.log(`[SMART-DEFAULTS] Updating: ${totalChildren} children, ${totalSeniors} seniors`);
+
+        // Get the parent containers for visual feedback
+        const toddlerContainer = toddlerFriendlyCheckbox.closest('.form-check');
+        const seniorContainer = seniorFriendlyCheckbox.closest('.form-check');
+        const childFlightContainer = childFriendlyFlightCheckbox.closest('.form-check');
+        const seniorFlightContainer = seniorFriendlyFlightCheckbox.closest('.form-check');
+
+        // Reset all checkboxes and enable all containers first
+        toddlerFriendlyCheckbox.checked = false;
+        seniorFriendlyCheckbox.checked = false;
+        childFriendlyFlightCheckbox.checked = false;
+        seniorFriendlyFlightCheckbox.checked = false;
+        
+        // Remove any previous styling and classes
+        [toddlerContainer, seniorContainer, childFlightContainer, seniorFlightContainer].forEach(container => {
+            if (container) {
+                container.style.opacity = '1';
+                container.style.pointerEvents = 'auto';
+                container.classList.remove('disabled', 'smart-defaults-active');
+            }
+        });
+
+        // Priority logic: if both children and seniors, prioritize based on higher count
+        if (totalChildren > 0 && totalSeniors > 0) {
+            if (totalChildren >= totalSeniors) {
+                // Prioritize child-friendly and disable senior options
+                console.log('[SMART-DEFAULTS] Selecting child-friendly (children >= seniors)');
+                toddlerFriendlyCheckbox.checked = true;
+                childFriendlyFlightCheckbox.checked = true;
+                
+                // Add active class to selected options
+                if (toddlerContainer) toddlerContainer.classList.add('smart-defaults-active');
+                if (childFlightContainer) childFlightContainer.classList.add('smart-defaults-active');
+                
+                // Visually disable senior options
+                if (seniorContainer) {
+                    seniorContainer.classList.add('disabled');
+                }
+                if (seniorFlightContainer) {
+                    seniorFlightContainer.classList.add('disabled');
+                }
+            } else {
+                // Prioritize senior-friendly and disable child options
+                console.log('[SMART-DEFAULTS] Selecting senior-friendly (seniors > children)');
+                seniorFriendlyCheckbox.checked = true;
+                seniorFriendlyFlightCheckbox.checked = true;
+                
+                // Add active class to selected options
+                if (seniorContainer) seniorContainer.classList.add('smart-defaults-active');
+                if (seniorFlightContainer) seniorFlightContainer.classList.add('smart-defaults-active');
+                
+                // Visually disable child options
+                if (toddlerContainer) {
+                    toddlerContainer.classList.add('disabled');
+                }
+                if (childFlightContainer) {
+                    childFlightContainer.classList.add('disabled');
+                }
+            }
+        } else if (totalChildren > 0) {
+            // Only children - enable child-friendly, disable senior
+            console.log('[SMART-DEFAULTS] Selecting child-friendly (only children)');
+            toddlerFriendlyCheckbox.checked = true;
+            childFriendlyFlightCheckbox.checked = true;
+            
+            // Add active class to selected options
+            if (toddlerContainer) toddlerContainer.classList.add('smart-defaults-active');
+            if (childFlightContainer) childFlightContainer.classList.add('smart-defaults-active');
+            
+            // Disable senior options
+            if (seniorContainer) {
+                seniorContainer.classList.add('disabled');
+            }
+            if (seniorFlightContainer) {
+                seniorFlightContainer.classList.add('disabled');
+            }
+        } else if (totalSeniors > 0) {
+            // Only seniors - enable senior-friendly, disable child
+            console.log('[SMART-DEFAULTS] Selecting senior-friendly (only seniors)');
+            seniorFriendlyCheckbox.checked = true;
+            seniorFriendlyFlightCheckbox.checked = true;
+            
+            // Add active class to selected options
+            if (seniorContainer) seniorContainer.classList.add('smart-defaults-active');
+            if (seniorFlightContainer) seniorFlightContainer.classList.add('smart-defaults-active');
+            
+            // Disable child options
+            if (toddlerContainer) {
+                toddlerContainer.classList.add('disabled');
+            }
+            if (childFlightContainer) {
+                childFlightContainer.classList.add('disabled');
+            }
+        } else {
+            console.log('[SMART-DEFAULTS] No children or seniors, all options available');
+            // All options remain available and unchecked
+        }
+    }
+
+    // Add event listeners to update friendly options when traveller numbers change
+    if (childrenInput) {
+        console.log('[SMART-DEFAULTS] Adding event listeners to children input');
+        childrenInput.addEventListener('input', updateFriendlyOptions);
+        childrenInput.addEventListener('change', updateFriendlyOptions);
+        childrenInput.addEventListener('keyup', updateFriendlyOptions);
+        childrenInput.addEventListener('blur', updateFriendlyOptions);
+    }
+    if (childrenUnder5Input) {
+        console.log('[SMART-DEFAULTS] Adding event listeners to children under 5 input');
+        childrenUnder5Input.addEventListener('input', updateFriendlyOptions);
+        childrenUnder5Input.addEventListener('change', updateFriendlyOptions);
+        childrenUnder5Input.addEventListener('keyup', updateFriendlyOptions);
+        childrenUnder5Input.addEventListener('blur', updateFriendlyOptions);
+    }
+    if (seniorsInput) {
+        console.log('[SMART-DEFAULTS] Adding event listeners to seniors input');
+        seniorsInput.addEventListener('input', updateFriendlyOptions);
+        seniorsInput.addEventListener('change', updateFriendlyOptions);
+        seniorsInput.addEventListener('keyup', updateFriendlyOptions);
+        seniorsInput.addEventListener('blur', updateFriendlyOptions);
+    }
+
+    // Add mutual exclusion logic for manual checkbox changes
+    if (childFriendlyFlightCheckbox && seniorFriendlyFlightCheckbox) {
+        childFriendlyFlightCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                seniorFriendlyFlightCheckbox.checked = false;
+                console.log('[FLIGHT-PREFERENCES] Child-friendly selected, deselected senior-friendly (mutual exclusion)');
+                
+                // Add visual feedback
+                const seniorContainer = seniorFriendlyFlightCheckbox.closest('.form-check');
+                if (seniorContainer) {
+                    seniorContainer.classList.add('disabled');
+                    setTimeout(() => seniorContainer.classList.remove('disabled'), 1000);
+                }
+            }
+        });
+        
+        seniorFriendlyFlightCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                childFriendlyFlightCheckbox.checked = false;
+                console.log('[FLIGHT-PREFERENCES] Senior-friendly selected, deselected child-friendly (mutual exclusion)');
+                
+                // Add visual feedback
+                const childContainer = childFriendlyFlightCheckbox.closest('.form-check');
+                if (childContainer) {
+                    childContainer.classList.add('disabled');
+                    setTimeout(() => childContainer.classList.remove('disabled'), 1000);
+                }
+            }
+        });
+    }
+
+    if (toddlerFriendlyCheckbox && seniorFriendlyCheckbox) {
+        toddlerFriendlyCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                seniorFriendlyCheckbox.checked = false;
+            }
+        });
+        
+        seniorFriendlyCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                toddlerFriendlyCheckbox.checked = false;
+            }
+        });
+    }
+
+    // Make the function globally available for debugging
+    window.updateFriendlyOptionsGlobal = updateFriendlyOptions;
+    
+    // Run initial check multiple times to ensure it works
+    console.log('[SMART-DEFAULTS] Running initial check...');
+    updateFriendlyOptions();
+    
+    setTimeout(() => {
+        console.log('[SMART-DEFAULTS] Running delayed check (100ms)...');
+        updateFriendlyOptions();
+    }, 100);
+    
+    setTimeout(() => {
+        console.log('[SMART-DEFAULTS] Running delayed check (300ms)...');
+        updateFriendlyOptions();
+    }, 300);
+    
+    setTimeout(() => {
+        console.log('[SMART-DEFAULTS] Running final check (1000ms)...');
+        updateFriendlyOptions();
+    }, 1000);
+    
+    console.log('[SMART-DEFAULTS] Traveller logic setup completed');
+    console.log('[SMART-DEFAULTS] You can test manually by calling: updateFriendlyOptionsGlobal()');
+    
+    // Debug function available via console for development
+    console.log('[SMART-DEFAULTS] Debug function available: updateFriendlyOptionsGlobal()');
+}
+
+// Function to setup date validation
+function setupDateValidation() {
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+
+    console.log('[DATE-VALIDATION] Setting up enhanced date validation...');
+
+    // Get today's date and future dates
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Helper function to add days to a date
+    function addDays(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result.toISOString().split('T')[0];
+    }
+
+    // Helper function to calculate days between dates
+    function daysBetween(date1, date2) {
+        const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+        const firstDate = new Date(date1);
+        const secondDate = new Date(date2);
+        return Math.round((secondDate - firstDate) / oneDay);
+    }
+
+    // Set initial constraints
+    if (startDateInput) {
+        startDateInput.min = todayStr;
+        // Only set start date if it's in the past or empty on initial load
+        if (!startDateInput.value || startDateInput.value < todayStr) {
+            startDateInput.value = todayStr;
+            console.log('[DATE-VALIDATION] Corrected start date to today (was empty or in past)');
+        }
+        
+        // If start date already has a value, set end date minimum immediately
+        if (startDateInput.value) {
+            const nextDay = addDays(startDateInput.value, 1);
+            if (endDateInput) {
+                endDateInput.min = nextDay;
+                console.log(`[DATE-VALIDATION] Set end date minimum to: ${nextDay} (day after start date)`);
+            }
+        }
+        
+        startDateInput.addEventListener('change', function() {
+            console.log(`[DATE-VALIDATION] Start date changed to: ${this.value}`);
+            
+            if (this.value) {
+                // Ensure start date is not in the past
+                if (this.value < todayStr) {
+                    console.log('[DATE-VALIDATION] Start date is in the past, correcting to today');
+                    this.value = todayStr;
+                }
+                
+                // Set minimum end date to day after start date
+                if (endDateInput) {
+                    const nextDay = addDays(this.value, 1);
+                    endDateInput.min = nextDay;
+                    console.log(`[DATE-VALIDATION] Updated end date minimum to: ${nextDay} (day after start date)`);
+                    
+                    // Only auto-set end date if it's invalid (before or equal to start date)
+                    if (endDateInput.value && endDateInput.value <= this.value) {
+                        // Correct to next day if end date is invalid
+                        const correctedEndDate = addDays(this.value, 1);
+                        endDateInput.value = correctedEndDate;
+                        endDateInput.classList.add('auto-corrected');
+                        console.log(`[DATE-VALIDATION] Auto-corrected end date to: ${correctedEndDate} (was before/equal to start)`);
+                        showDateFeedback('End date corrected to be after start date', 'warning');
+                        
+                        // Remove auto-corrected class after animation
+                        setTimeout(() => {
+                            endDateInput.classList.remove('auto-corrected');
+                        }, 1000);
+                    }
+                    
+                    // Additional validation check (redundant but safe)
+                    // This is handled above, but kept for safety
+                    
+                    // Update trip duration display
+                    if (endDateInput.value) {
+                        const duration = daysBetween(this.value, endDateInput.value);
+                        if (duration > 0) {
+                            updateTripDurationDisplay(duration);
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Trigger initial validation
+        if (startDateInput.value) {
+            startDateInput.dispatchEvent(new Event('change'));
+        }
+    }
+
+    if (endDateInput) {
+        // End date minimum will be set dynamically based on start date
+        console.log('[DATE-VALIDATION] End date minimum will be set based on start date selection');
+        
+        endDateInput.addEventListener('change', function() {
+            console.log(`[DATE-VALIDATION] End date changed to: ${this.value}`);
+            
+            if (startDateInput && startDateInput.value && this.value) {
+                if (this.value <= startDateInput.value) {
+                    const correctedEndDate = addDays(startDateInput.value, 1);
+                    this.value = correctedEndDate;
+                    console.log(`[DATE-VALIDATION] End date corrected to: ${correctedEndDate} (must be after start date)`);
+                    
+                    // Show user-friendly feedback
+                    showDateFeedback('End date must be after start date. Auto-corrected to next day.');
+                }
+                
+                // Calculate and show trip duration
+                const duration = daysBetween(startDateInput.value, this.value);
+                if (duration > 0) {
+                    updateTripDurationDisplay(duration);
+                    showDateFeedback(`Trip duration: ${duration} day${duration > 1 ? 's' : ''}`, 'success');
+                }
+            }
+        });
+    }
+
+    // Helper function to update trip duration display
+    function updateTripDurationDisplay(duration) {
+        const durationDisplay = document.getElementById('tripDurationDisplay');
+        const durationText = document.getElementById('tripDurationText');
+        
+        if (durationDisplay && durationText && duration > 0) {
+            durationText.textContent = `${duration} day${duration > 1 ? 's' : ''}`;
+            durationDisplay.style.display = 'block';
+            durationDisplay.style.animation = 'fadeIn 0.3s ease-in-out';
+            console.log(`[DATE-VALIDATION] Updated trip duration display: ${duration} days`);
+        } else if (durationDisplay && duration <= 0) {
+            durationDisplay.style.display = 'none';
+            console.log('[DATE-VALIDATION] Hidden trip duration display (invalid duration)');
+        }
+    }
+
+    // Helper function to show date feedback
+    function showDateFeedback(message, type = 'info') {
+        console.log(`[DATE-VALIDATION] ${message}`);
+        
+        // Create or update feedback element
+        let feedbackEl = document.getElementById('date-feedback');
+        if (!feedbackEl) {
+            feedbackEl = document.createElement('div');
+            feedbackEl.id = 'date-feedback';
+            feedbackEl.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 10px 15px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 300px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                transition: all 0.3s ease;
+            `;
+            document.body.appendChild(feedbackEl);
+        }
+        
+        // Set style based on type
+        const styles = {
+            success: 'background: linear-gradient(135deg, #10b981, #059669); color: white;',
+            warning: 'background: linear-gradient(135deg, #f59e0b, #d97706); color: white;',
+            info: 'background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white;'
+        };
+        
+        feedbackEl.style.cssText += styles[type] || styles.info;
+        feedbackEl.textContent = message;
+        feedbackEl.style.display = 'block';
+        
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            if (feedbackEl && feedbackEl.parentNode) {
+                feedbackEl.style.opacity = '0';
+                setTimeout(() => {
+                    if (feedbackEl && feedbackEl.parentNode) {
+                        feedbackEl.parentNode.removeChild(feedbackEl);
+                    }
+                }, 300);
+            }
+        }, 3000);
+    }
+
+    console.log('[DATE-VALIDATION] Enhanced date validation setup completed');
+}
 
 // Preloader
 window.addEventListener('load', () => {
@@ -210,7 +682,7 @@ async function handleTripPlanning(outputSection) {
             children: parseInt(document.getElementById('children').value) || 0,
             seniors: parseInt(document.getElementById('seniors').value) || 0,
             children_under_5: parseInt(document.getElementById('children_under_5').value) || 0,
-            itinerary_based_passengers: document.getElementById('itinerary_based_passengers')?.checked || false
+            itinerary_based_passengers: true // Auto-enable since we have smart defaults
         },
         flight_preferences: {
             avoid_red_eye: document.getElementById('avoid_red_eye')?.checked || false,
@@ -1066,7 +1538,7 @@ async function handleTripPlanning(outputSection) {
                 children: parseInt(document.getElementById('children').value) || 0,
                 seniors: parseInt(document.getElementById('seniors').value) || 0,
                 children_under_5: parseInt(document.getElementById('children_under_5').value) || 0,
-                itinerary_based_passengers: document.getElementById('itinerary_based_passengers')?.checked || false
+                itinerary_based_passengers: true // Auto-enable since we have smart defaults
             },
             flight_preferences: {
                 avoid_red_eye: document.getElementById('avoid_red_eye')?.checked || false,
