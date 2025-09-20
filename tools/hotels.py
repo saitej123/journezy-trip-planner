@@ -46,6 +46,10 @@ def get_formatted_hotels_info(hotels: list, currency_code: str = "USD") -> str:
         if images:
             first = images[0] or {}
             image_url = first.get("thumbnail") or first.get("original_image") or first.get("link") or ""
+        
+        # Use local fallback if no image found
+        if not image_url or image_url == "N/A":
+            image_url = "/static/images/fallbacks/hotel.png"
 
         formatted_hotels.append(name)
         if rate_per_night:

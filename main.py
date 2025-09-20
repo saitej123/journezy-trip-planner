@@ -14,8 +14,8 @@ from grounding_service import GroundedFlightsSummarizer
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 [LIFESPAN] Initializing application...")
-    print("✅ [LIFESPAN] Application initialized")
+    print("🚀 [LIFESPAN] Initializing Journezy Trip Planner...")
+    print("✅ [LIFESPAN] Application ready")
     yield
 
 app = FastAPI(
@@ -441,48 +441,22 @@ async def plan_trip(request: TripRequest):
         print(f"🤖 [MAIN] Workflow result type: {type(result)}")
         print(f"📝 [MAIN] Result preview: {result[:200] if isinstance(result, str) else str(result)[:200]}...")
 
-        # Structure the workflow data safely
-        flights_data = getattr(workflow, 'flights_data', None)
-        hotels_data = getattr(workflow, 'hotels_data', None)
-        places_data = getattr(workflow, 'places_data', None)
-        itinerary_data = getattr(workflow, 'itinerary', None)
-        
-        # Safe string conversion for logging
-        def safe_preview(data, length=200):
-            if data is None:
-                return 'None'
-            elif isinstance(data, str):
-                return data[:length] + '...' if len(data) > length else data
-            else:
-                return str(data)[:length] + '...'
-        
-        print(f"🔍 [MAIN] Flights data: {safe_preview(flights_data)}")
-        print(f"🔍 [MAIN] Hotels data: {safe_preview(hotels_data)}")
-        print(f"🔍 [MAIN] Places data: {safe_preview(places_data)}")
-        print(f"🔍 [MAIN] Itinerary data: {safe_preview(itinerary_data)}")
-        
-        # Ensure we have valid data for each section or provide fallbacks
-        def ensure_valid_data(data, section_name):
-            if data is None or (isinstance(data, str) and (data.strip() == "" or "Error" in data or "Failed" in data)):
-                print(f"⚠️ [MAIN] {section_name} data is empty or contains errors, will use frontend fallback")
-                return None
-            return data
-        
+        # Structure the workflow data
         workflow_data = {
             "flights": {
-                "data": ensure_valid_data(flights_data, "Flights"),
+                "data": workflow.flights_data if hasattr(workflow, 'flights_data') else None,
                 "formatted": True
             },
             "hotels": {
-                "data": ensure_valid_data(hotels_data, "Hotels"),
+                "data": workflow.hotels_data if hasattr(workflow, 'hotels_data') else None,
                 "formatted": True
             },
             "places": {
-                "data": ensure_valid_data(places_data, "Places"),
+                "data": workflow.places_data if hasattr(workflow, 'places_data') else None,
                 "formatted": True
             },
             "itinerary": {
-                "data": ensure_valid_data(itinerary_data, "Itinerary"),
+                "data": workflow.itinerary if hasattr(workflow, 'itinerary') else None,
                 "formatted": True
             }
         }
@@ -549,33 +523,36 @@ async def plan_trip(request: TripRequest):
                             print(f"🧹 [MAIN] Cleaned up temp PDF file: {result}")
                         except Exception as cleanup_err:
                             print(f"⚠️ [MAIN] Error cleaning up PDF file: {cleanup_err}")
+                
+                # Handle .pdf in result string (reference format)
+                elif ".pdf" in result:
+                    with open(result, 'rb') as f:
+                        pdf_content = f.read()
+                    # Convert binary PDF to base64
+                    pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+                    document_data = pdf_base64
+                    document_type = "pdf"
                     
-                    elif result.lower().endswith('.md'):
-                        print(f"📝 [MAIN] Detected markdown file output at: {result}")
-                        try:
-                            with open(result, 'r', encoding='utf-8') as f:
-                                document_data = f.read()
-                            document_type = "markdown"
-                            print(f"✅ [MAIN] Successfully read markdown file")
-                        except Exception as file_err:
-                            print(f"❌ [MAIN] Error reading markdown file: {file_err}")
-                            document_data = result
-                            document_type = "markdown"
-                        
-                        # Clean up temp file
-                        try:
-                            os.unlink(result)
-                            print(f"🧹 [MAIN] Cleaned up temp markdown file: {result}")
-                        except Exception as cleanup_err:
-                            print(f"⚠️ [MAIN] Error cleaning up markdown file: {cleanup_err}")
-                    else:
-                        print(f"📝 [MAIN] Unknown file type, treating as text: {result}")
+                elif result.lower().endswith('.md'):
+                    print(f"📝 [MAIN] Detected markdown file output at: {result}")
+                    try:
+                        with open(result, 'r', encoding='utf-8') as f:
+                            document_data = f.read()
+                        document_type = "markdown"
+                        print(f"✅ [MAIN] Successfully read markdown file")
+                    except Exception as file_err:
+                        print(f"❌ [MAIN] Error reading markdown file: {file_err}")
                         document_data = result
                         document_type = "markdown"
-                
-                # Error message or markdown/text content
+                        
+                    # Clean up temp file
+                    try:
+                        os.unlink(result)
+                        print(f"🧹 [MAIN] Cleaned up temp markdown file: {result}")
+                    except Exception as cleanup_err:
+                        print(f"⚠️ [MAIN] Error cleaning up markdown file: {cleanup_err}")
                 else:
-                    print("📝 [MAIN] Treating workflow output as text content")
+                    print(f"📝 [MAIN] Unknown file type, treating as text: {result}")
                     document_data = result
                     document_type = "markdown"
             

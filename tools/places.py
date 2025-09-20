@@ -65,8 +65,8 @@ def get_formatted_places_info(sights: list) -> str:
                 formatted_places.append(f"Image: {image_url}")
             else:
                 print(f"⚠️ [PLACES-FORMAT] No valid image found for {sight.get('title', 'Unknown')}")
-                # Provide a placeholder or fallback image
-                formatted_places.append("Image: https://via.placeholder.com/300x200?text=No+Image+Available")
+                # Use local fallback image instead of external placeholder
+                formatted_places.append("Image: /static/images/fallbacks/no-image.png")
             
             formatted_places.append("")
             
@@ -78,7 +78,7 @@ def get_formatted_places_info(sights: list) -> str:
                 "Description: Error loading details",
                 "Rating: N/A",
                 "Price: N/A",
-                "Image: https://via.placeholder.com/300x200?text=No+Image+Available",
+                "Image: /static/images/fallbacks/no-image.png",
                 ""
             ])
     
@@ -334,7 +334,7 @@ def find_places_to_visit(
                     "rating": "4.2",
                     "reviews": "Popular destination",
                     "price": "Free Entry",
-                    "thumbnail": "https://via.placeholder.com/300x200?text=City+Center"
+                    "thumbnail": "/static/images/fallbacks/city-center.png"
                 },
                 {
                     "title": f"{location} Historic District",
@@ -342,7 +342,7 @@ def find_places_to_visit(
                     "rating": "4.3",
                     "reviews": "Historical significance",
                     "price": "Free Entry",
-                    "thumbnail": "https://via.placeholder.com/300x200?text=Historic+District"
+                    "thumbnail": "/static/images/fallbacks/historic-district.png"
                 },
                 {
                     "title": f"{location} Local Markets",
@@ -350,7 +350,7 @@ def find_places_to_visit(
                     "rating": "4.1",
                     "reviews": "Authentic experience",
                     "price": "Varies",
-                    "thumbnail": "https://via.placeholder.com/300x200?text=Local+Markets"
+                    "thumbnail": "/static/images/fallbacks/local-markets.png"
                 },
                 {
                     "title": f"{location} Parks & Gardens",
@@ -358,7 +358,7 @@ def find_places_to_visit(
                     "rating": "4.4",
                     "reviews": "Nature lovers",
                     "price": "Free Entry",
-                    "thumbnail": "https://via.placeholder.com/300x200?text=Parks+%26+Gardens"
+                    "thumbnail": "/static/images/fallbacks/parks-gardens.png"
                 },
                 {
                     "title": f"{location} Cultural Attractions",
@@ -366,7 +366,7 @@ def find_places_to_visit(
                     "rating": "4.0",
                     "reviews": "Cultural experience",
                     "price": "Entry fees vary",
-                    "thumbnail": "https://via.placeholder.com/300x200?text=Cultural+Attractions"
+                    "thumbnail": "/static/images/fallbacks/cultural-attractions.png"
                 }
             ]
             places_data = fallback_places

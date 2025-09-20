@@ -754,65 +754,6 @@ function getSelectedLanguage() {
     return lang;
 }
 
-// Modify the existing handleTripPlanning function to include output section parameter
-async function handleTripPlanning(outputSection) {
-    const formData = {
-        from_city: document.getElementById('from_city').value,
-        to_city: document.getElementById('to_city').value,
-        additional_instructions: document.getElementById('additional_instructions').value,
-        language: getSelectedLanguage(),
-        start_date: document.getElementById('start_date').value,
-        end_date: document.getElementById('end_date').value,
-        budget_amount: (document.getElementById('budget_amount')?.value || '').trim() ? Number(document.getElementById('budget_amount').value) : null,
-        currency: (document.getElementById('currency')?.value || 'USD'),
-        travelers: {
-            adults: parseInt(document.getElementById('adults').value) || 1,
-            children: parseInt(document.getElementById('children').value) || 0,
-            seniors: parseInt(document.getElementById('seniors').value) || 0,
-            children_under_5: parseInt(document.getElementById('children_under_5').value) || 0,
-            itinerary_based_passengers: true // Auto-enable since we have smart defaults
-        },
-        flight_preferences: {
-            avoid_red_eye: document.getElementById('avoid_red_eye')?.checked || false,
-            avoid_early_morning: document.getElementById('avoid_early_morning')?.checked || false,
-            child_friendly: document.getElementById('child_friendly')?.checked || false,
-            senior_friendly: document.getElementById('senior_friendly')?.checked || false,
-            direct_flights_only: document.getElementById('direct_flights_only')?.checked || false
-        },
-        consider_toddler_friendly: document.getElementById('consider_toddler_friendly')?.checked || false,
-        consider_senior_friendly: document.getElementById('consider_senior_friendly')?.checked || false,
-        safety_check: document.getElementById('safety_check')?.checked || true
-    };
-
-    // Store search context for citation links
-    window.searchContext = {
-        from: formData.from_city,
-        to: formData.to_city,
-        startDate: formData.start_date,
-        endDate: formData.end_date,
-        currency: formData.currency
-    };
-
-    const response = await fetch('/plan-trip', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-    });
-
-    const data = await response.json();
-
-    if (data.status === 'success') {
-        await displayResults(data);
-        if (outputSection) {
-            outputSection.classList.remove('hidden');
-            outputSection.scrollIntoView({ behavior: 'smooth' });
-        }
-    } else {
-        throw new Error(data.message || 'Trip planning failed');
-    }
-}
 
 // This form submission handler is removed - using the main one below
 
@@ -991,8 +932,11 @@ function parseHotelsData(hotelsString) {
                     }
                 } else if (line.includes('Image:')) {
                     const imageUrl = line.replace('Image:', '').trim();
-                    if (imageUrl && imageUrl !== 'N/A' && imageUrl.startsWith('http')) {
+                    if (imageUrl && imageUrl !== 'N/A' && (imageUrl.startsWith('http') || imageUrl.startsWith('/static/'))) {
                         hotelData.image = imageUrl;
+                        console.log('🖼️ [PARSE-HOTELS] Found valid image URL:', imageUrl);
+                    } else {
+                        console.log('⚠️ [PARSE-HOTELS] Invalid image URL:', imageUrl);
                     }
                 }
             }
@@ -1165,7 +1109,7 @@ function parsePlacesData(placesString) {
             } else if (line.startsWith('Image:')) {
                 const imageUrl = line.replace('Image:', '').trim();
                 // Only set image if it's a valid URL (not "N/A" or empty)
-                if (imageUrl && imageUrl !== 'N/A' && imageUrl.startsWith('http')) {
+                if (imageUrl && imageUrl !== 'N/A' && (imageUrl.startsWith('http') || imageUrl.startsWith('/static/'))) {
                     currentPlace.image = imageUrl;
                     console.log('🖼️ [PARSE-PLACES] Found valid image URL:', imageUrl);
                 } else {
@@ -1251,7 +1195,7 @@ function parsePlacesData(placesString) {
                             price = nextLine.replace('Price:', '').trim();
                         } else if (nextLine.startsWith('Image:')) {
                             const imageUrl = nextLine.replace('Image:', '').trim();
-                            if (imageUrl && imageUrl !== 'N/A' && imageUrl.startsWith('http')) {
+                            if (imageUrl && imageUrl !== 'N/A' && (imageUrl.startsWith('http') || imageUrl.startsWith('/static/'))) {
                                 image = imageUrl;
                             }
                         }
@@ -2279,27 +2223,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'alert alert-danger alert-dismissible fade show';
-    errorDiv.innerHTML = `
-        <i class="fas fa-exclamation-circle me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    const formCard = document.querySelector('.planning-card');
-    formCard.insertBefore(errorDiv, formCard.firstChild);
-    
-    // Scroll to error message
-    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    // Auto dismiss after 5 seconds
-    setTimeout(() => {
-        errorDiv.classList.remove('show');
-        setTimeout(() => errorDiv.remove(), 150);
-    }, 5000);
-}
 
 // Helper function to clean up broken URLs and problematic content from itinerary
 function cleanItineraryContent(content) {
