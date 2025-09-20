@@ -261,11 +261,13 @@
                                     data-aos="fade-up"
                                     data-aos-delay="140"
                                 >
-                                    <option value="" disabled selected>Select currency</option>
-                                    <option value="USD">USD - US Dollar</option>
-                                    <option value="INR">INR - Indian Rupee</option>
+                                    <option value="USD" selected>💵 USD - US Dollar ($)</option>
+                                    <option value="INR">💰 INR - Indian Rupee (₹)</option>
                                 </select>
-                                <label for="currency">Currency</label>
+                                <label for="currency">💸 Currency</label>
+                                <div class="form-text">
+                                    <small><i class="fas fa-info-circle me-1"></i>Budget amounts will be displayed in selected currency</small>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -275,13 +277,16 @@
                                     class="form-control" 
                                     id="budget_amount" 
                                     name="budget_amount"
-                                    placeholder="Overall Budget (optional)"
-                                    min="0"
-                                    step="1"
+                                    placeholder="Enter total budget for entire trip"
+                                    min="100"
+                                    step="100"
                                     data-aos="fade-up"
                                     data-aos-delay="160"
                                 >
-                                <label for="budget_amount">Overall Budget (optional)</label>
+                                <label for="budget_amount">💰 Total Budget (optional)</label>
+                                <div class="form-text">
+                                    <small><i class="fas fa-users me-1"></i>Total amount for all travelers (will be split per person automatically)</small>
+                                </div>
                             </div>
                         </div>
                     </div>

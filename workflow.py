@@ -338,17 +338,51 @@ class TourPlannerWorkflow:
                             if mnum:
                                 nightly = float(mnum.group(1))
 
+                    # Calculate total travelers for per-person budget
+                    total_travelers = 1
+                    if self.travelers:
+                        total_travelers = (self.travelers.adults + 
+                                         self.travelers.children + 
+                                         self.travelers.seniors + 
+                                         self.travelers.children_under_5)
+                    
+                    per_person_budget = float(budget_amount) / max(total_travelers, 1)
+                    symbol = "$" if user_currency == "USD" else "₹"
+                    
                     total_hotel = nightly * max(nights, 1)
                     est_total = flight_cost + total_hotel
-                    overage = max(est_total - float(budget_amount), 0.0)
-                    symbol = "$" if user_currency == "USD" else "₹"
+                    remaining_budget = float(budget_amount) - est_total
+                    daily_spending_budget = remaining_budget / max(nights, 1) if nights > 0 else remaining_budget
+                    per_person_daily = daily_spending_budget / max(total_travelers, 1)
+                    
                     budget_summary_note = (
-                        f"Budget: {symbol}{float(budget_amount):,.0f} {user_currency}. "
-                        f"Estimated total (flights + hotels): {symbol}{est_total:,.0f} {user_currency}. "
-                        + (f"Over budget by {symbol}{overage:,.0f}. " if overage > 0 else "Within budget. ")
+                        f"\n\n**BUDGET INFORMATION FOR ITINERARY:**\n"
+                        f"- OVERALL TRIP BUDGET: {symbol}{float(budget_amount):,.0f} {user_currency} (Total provided by traveler)\n"
+                        f"- PER PERSON ALLOCATION: {symbol}{per_person_budget:,.0f} {user_currency} (Split among {total_travelers} traveler{'s' if total_travelers > 1 else ''})\n"
+                        f"- Estimated Flight Costs: {symbol}{flight_cost:,.0f} {user_currency} (TOTAL for all travelers)\n"
+                        f"- Estimated Hotel Costs: {symbol}{total_hotel:,.0f} {user_currency} (TOTAL for {nights} nights)\n"
+                        f"- Remaining for Activities/Meals: {symbol}{remaining_budget:,.0f} {user_currency} (TOTAL for all travelers)\n"
+                        f"- Daily Spending per Person: {symbol}{per_person_daily:,.0f} {user_currency} (Individual daily allowance)\n"
+                        + (f"- BUDGET STATUS: Over budget by {symbol}{abs(remaining_budget):,.0f}" if remaining_budget < 0 else f"- BUDGET STATUS: Within budget with {symbol}{remaining_budget:,.0f} remaining")
                     )
-                except Exception:
-                    budget_summary_note = f"Budget: {budget_amount} {user_currency}. (Estimation unavailable)"
+                except Exception as e:
+                    # Calculate basic per-person budget even if detailed analysis fails
+                    total_travelers = 1
+                    if self.travelers:
+                        total_travelers = (self.travelers.adults + 
+                                         self.travelers.children + 
+                                         self.travelers.seniors + 
+                                         self.travelers.children_under_5)
+                    
+                    per_person_budget = float(budget_amount) / max(total_travelers, 1)
+                    symbol = "$" if user_currency == "USD" else "₹"
+                    
+                    budget_summary_note = (
+                        f"\n\n**BUDGET INFORMATION FOR ITINERARY:**\n"
+                        f"- OVERALL TRIP BUDGET: {symbol}{float(budget_amount):,.0f} {user_currency} (Total provided by traveler)\n"
+                        f"- PER PERSON ALLOCATION: {symbol}{per_person_budget:,.0f} {user_currency} (Split among {total_travelers} traveler{'s' if total_travelers > 1 else ''})\n"
+                        f"- Note: Detailed cost breakdown unavailable, but use these amounts for planning\n"
+                    )
 
             # Prepare traveler context for itinerary
             traveler_context = ""
@@ -513,9 +547,29 @@ class TourPlannerWorkflow:
             try:
                 import markdown
                 itinerary_html = markdown.markdown(itinerary_content, extensions=['tables', 'fenced_code'])
+                print(f"✅ [PDF-GEN] Converted markdown to HTML: {len(itinerary_html)} characters")
+                
+                # Enhance image tags with proper styling
+                import re
+                # Add styling classes to images
+                itinerary_html = re.sub(
+                    r'<img([^>]*?)src="([^"]*?)"([^>]*?)>',
+                    r'<div class="image-container"><img\1src="\2"\3 class="place-image" loading="lazy"><div class="image-caption">📸 Destination Image</div></div>',
+                    itinerary_html
+                )
+                print("🖼️  [PDF-GEN] Enhanced image tags with styling")
+                
             except ImportError:
-                # Fallback: simple markdown to HTML conversion
+                # Fallback: simple markdown to HTML conversion with basic image handling
+                import re
                 itinerary_html = itinerary_content.replace('\n', '<br>')
+                # Convert markdown images to HTML
+                itinerary_html = re.sub(
+                    r'!\[([^\]]*?)\]\(([^)]*?)\)',
+                    r'<div class="image-container"><img src="\2" alt="\1" class="place-image"><div class="image-caption">\1</div></div>',
+                    itinerary_html
+                )
+                print("🖼️  [PDF-GEN] Converted markdown images to HTML (fallback)")
             
             # Create comprehensive HTML document
             html_content = f"""
@@ -587,9 +641,118 @@ class TourPlannerWorkflow:
                         background: #f8fafc;
                         border: 1px solid #e2e8f0;
                         border-radius: 4px;
-                        padding: 6px;
-                        margin-bottom: 6px;
+                        padding: 8px;
+                        margin-bottom: 8px;
                         border-left: 3px solid #4299e1;
+                        page-break-inside: avoid;
+                    }}
+                    .image-container {{
+                        text-align: center;
+                        margin: 10px 0;
+                        page-break-inside: avoid;
+                    }}
+                    .place-image, .hotel-image {{
+                        max-width: 100%;
+                        max-height: 200px;
+                        height: auto;
+                        border-radius: 6px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        margin: 5px 0;
+                    }}
+                    .image-caption {{
+                        font-size: 9px;
+                        color: #64748b;
+                        font-style: italic;
+                        margin-top: 4px;
+                    }}
+                    .currency-amount {{
+                        color: #059669;
+                        font-weight: 600;
+                    }}
+                    
+                    /* Enhanced Budget Styling */
+                    .budget-section {{
+                        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+                        border: 2px solid #16a34a;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin: 15px 0;
+                        page-break-inside: avoid;
+                    }}
+                    
+                    .budget-table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 10px 0;
+                        background: white;
+                        border-radius: 6px;
+                        overflow: hidden;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }}
+                    
+                    .budget-table th {{
+                        background: linear-gradient(135deg, #16a34a, #22c55e);
+                        color: white;
+                        padding: 8px;
+                        text-align: left;
+                        font-weight: 600;
+                        font-size: 10px;
+                    }}
+                    
+                    .budget-table td {{
+                        padding: 6px 8px;
+                        border-bottom: 1px solid #e5e7eb;
+                        font-size: 9px;
+                    }}
+                    
+                    .budget-table tr:nth-child(even) {{
+                        background: #f9fafb;
+                    }}
+                    
+                    .budget-highlight {{
+                        background: linear-gradient(135deg, #059669, #10b981);
+                        color: white;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-weight: 700;
+                        display: inline-block;
+                        margin: 0 2px;
+                    }}
+                    
+                    .budget-total {{
+                        background: linear-gradient(135deg, #1e40af, #3b82f6);
+                        color: white;
+                        padding: 3px 8px;
+                        border-radius: 6px;
+                        font-weight: 800;
+                        font-size: 11px;
+                        display: inline-block;
+                    }}
+                    
+                    .budget-warning {{
+                        background: linear-gradient(135deg, #dc2626, #ef4444);
+                        color: white;
+                        padding: 3px 8px;
+                        border-radius: 6px;
+                        font-weight: 700;
+                        display: inline-block;
+                    }}
+                    
+                    .budget-success {{
+                        background: linear-gradient(135deg, #059669, #10b981);
+                        color: white;
+                        padding: 3px 8px;
+                        border-radius: 6px;
+                        font-weight: 700;
+                        display: inline-block;
+                    }}
+                    .timing-info {{
+                        color: #dc2626;
+                        font-weight: 500;
+                    }}
+                    .airline-name {{
+                        color: #1e40af;
+                        font-weight: 600;
                     }}
                     .flight-header {{
                         display: flex;

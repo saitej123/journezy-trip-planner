@@ -42,12 +42,14 @@ Create a comprehensive, professional travel itinerary in **{language}** for the 
 
 ### 2. **Transportation & Logistics** ✈️
 **Flight Details:**
-- **CRITICAL**: Use ONLY the provided flight information. Do NOT fabricate any details.
+- **CRITICAL**: Use ONLY the provided flight information with EXACT timings and airline names. Do NOT fabricate any details.
+- **Display Format**: Show airline name, flight number, departure time, arrival time, and duration exactly as provided
+- **Currency Consistency**: Ensure all prices use the same currency symbol ($ for USD, ₹ for INR) throughout
 - If no flight data provided, clearly state "Flight information not available - please book separately"
-- Include both outbound AND return segments if available
-- Note flight preferences implemented (child-friendly times, senior considerations, etc.)
-- Airport information and transfer recommendations
-- Check-in and arrival logistics
+- Include both outbound AND return segments if available with clear timing
+- Note flight preferences implemented (child-friendly times: 10 AM - 6 PM, senior considerations: 9 AM - 4 PM, etc.)
+- Airport information and transfer recommendations with specific terminal details
+- Check-in and arrival logistics with recommended arrival times
 
 **Ground Transportation:**
 - Airport transfers and local transportation options
@@ -56,12 +58,14 @@ Create a comprehensive, professional travel itinerary in **{language}** for the 
 - Family-friendly transportation options
 
 ### 3. **Accommodation Strategy** 🏨
-- Hotel/accommodation recommendations based on traveler profile
-- Check-in/check-out optimization
-- Family room configurations and amenities
-- Senior-friendly features (elevator access, grab bars, etc.)
-- Accessibility features and services
-- Neighborhood safety and convenience factors
+- **Hotel/accommodation recommendations** based on traveler profile with exact names from provided data
+- **Include hotel images** when available in the data - reference them with proper markdown formatting
+- **Pricing consistency**: Use correct currency symbols ($ for USD, ₹ for INR) for all hotel rates
+- Check-in/check-out optimization with specific timing recommendations
+- Family room configurations and amenities for multi-generational groups
+- Senior-friendly features (elevator access, grab bars, ground floor rooms, etc.)
+- Accessibility features and services for mobility-impaired travelers
+- Neighborhood safety and convenience factors with local insights
 
 ### 4. **Daily Itinerary** 📅
 Create a detailed day-by-day plan that includes:
@@ -78,11 +82,12 @@ Create a detailed day-by-day plan that includes:
   * Weather contingency plans
 
 **Activity Optimization:**
-- Group nearby attractions to minimize travel
-- Balance active and relaxing activities
-- Include authentic local experiences
-- Consider energy levels for different age groups
-- Build in spontaneity and flexibility
+- Group nearby attractions to minimize travel with specific timing and logistics
+- **Include place images** when available in the data - reference them with proper markdown formatting
+- Balance active and relaxing activities based on traveler demographics
+- Include authentic local experiences with cultural context and preparation tips
+- Consider energy levels for different age groups (children need breaks, seniors need accessible options)
+- Build in spontaneity and flexibility with backup plans for weather or crowds
 
 ### 5. **Dining & Culinary Experiences** 🍽️
 - Breakfast, lunch, and dinner recommendations
@@ -112,16 +117,29 @@ Create a detailed day-by-day plan that includes:
 - Child safety guidelines
 - Common scams and how to avoid them
 
-### 8. **Budget Breakdown** 💰
+### 8. **Budget Breakdown & Financial Planning** 💰
 *(If budget information is provided)*
-- Flight costs (from provided data)
-- Accommodation costs (from provided data)  
-- Daily spending estimates
-- Activity and attraction costs
-- Meal budgets
-- Transportation costs
-- Emergency fund recommendations
-- Money-saving tips and free activities
+
+**CRITICAL**: Always clearly specify whether amounts are "TOTAL" or "PER PERSON"
+
+#### Budget Summary Table:
+| Category | Cost | Type | Notes |
+|----------|------|------|-------|
+| **OVERALL TRIP BUDGET** | [Amount] [Currency] | TOTAL | Complete budget provided by traveler |
+| **Per Person Allocation** | [Amount] [Currency] | PER PERSON | Budget divided among all travelers |
+| **Flights** | [Amount] [Currency] | TOTAL | From provided flight data |
+| **Hotels** | [Amount] [Currency] | TOTAL | From provided hotel data |
+| **Activities** | [Amount] [Currency] | TOTAL | Estimated for all travelers |
+| **Meals** | [Amount] [Currency] | TOTAL | Daily estimates × days × people |
+| **Local Transport** | [Amount] [Currency] | TOTAL | Airport transfers, local travel |
+| **Miscellaneous** | [Amount] [Currency] | TOTAL | Shopping, tips, emergency fund |
+
+#### Daily Spending Guide:
+- **Per Person Daily Budget**: [Amount] [Currency] (meals + activities + transport)
+- **Budget-Friendly Options**: Free activities, local eateries, public transport
+- **Mid-Range Options**: Popular attractions, moderate restaurants
+- **Splurge Experiences**: Premium activities worth the extra cost
+- **Money-Saving Tips**: Local discounts, group rates, off-peak timing
 
 ### 9. **Practical Travel Tips** 🎒
 - Packing recommendations (climate-specific, activity-based)
@@ -289,24 +307,74 @@ def process_itinerary_images(itinerary_text: str, flights_info: str, hotels_info
 
     print(f"🖼️  [ITINERARY-IMAGES] Found {len(image_urls)} images to embed")
 
-    # Add images section at the end of the itinerary
-    images_section = "\n\n## 📸 Destination Images\n\n"
+    # Process images in sections throughout the itinerary
+    enhanced_itinerary = itinerary_text
+    
+    # Add images within hotel sections
+    hotel_images = {k: v for k, v in image_urls.items() if k.startswith('🏨')}
+    if hotel_images and "## Accommodation Strategy" in enhanced_itinerary:
+        hotel_images_md = "\n\n### 🏨 Recommended Hotels with Images\n\n"
+        for title, url in hotel_images.items():
+            if url and url.startswith('http') and len(url) > 10:
+                clean_title = title.replace('🏨 ', '')
+                hotel_images_md += f"**{clean_title}**\n\n"
+                hotel_images_md += f"![{clean_title}]({url})\n\n"
+                print(f"🖼️  [ITINERARY-IMAGES] Added hotel image: {clean_title}")
+        
+        # Insert after accommodation strategy section
+        accommodation_pos = enhanced_itinerary.find("## Accommodation Strategy")
+        if accommodation_pos != -1:
+            # Find the end of the accommodation section (next ## header)
+            next_section = enhanced_itinerary.find("\n## ", accommodation_pos + 20)
+            if next_section != -1:
+                enhanced_itinerary = (enhanced_itinerary[:next_section] + 
+                                    hotel_images_md + 
+                                    enhanced_itinerary[next_section:])
+            else:
+                enhanced_itinerary += hotel_images_md
 
-    for i, (title, url) in enumerate(image_urls.items(), 1):
-        # Validate URL before adding
-        if url and url.startswith('http') and len(url) > 10:
-            images_section += f"### {title}\n"
-            images_section += f"![{title}]({url})\n\n"
-            print(f"🖼️  [ITINERARY-IMAGES] Added image: {title}")
+    # Add images within places sections  
+    place_images = {k: v for k, v in image_urls.items() if k.startswith('📍')}
+    if place_images and "## Daily Itinerary" in enhanced_itinerary:
+        place_images_md = "\n\n### 📍 Must-Visit Places with Images\n\n"
+        for title, url in place_images.items():
+            if url and url.startswith('http') and len(url) > 10:
+                clean_title = title.replace('📍 ', '')
+                place_images_md += f"**{clean_title}**\n\n"
+                place_images_md += f"![{clean_title}]({url})\n\n"
+                print(f"🖼️  [ITINERARY-IMAGES] Added place image: {clean_title}")
+        
+        # Insert after daily itinerary section
+        daily_pos = enhanced_itinerary.find("## Daily Itinerary")
+        if daily_pos != -1:
+            # Find the end of the daily itinerary section
+            next_section = enhanced_itinerary.find("\n## ", daily_pos + 20)
+            if next_section != -1:
+                enhanced_itinerary = (enhanced_itinerary[:next_section] + 
+                                    place_images_md + 
+                                    enhanced_itinerary[next_section:])
+            else:
+                enhanced_itinerary += place_images_md
 
-    # Insert images section before the practical tips section
-    if "## Practical Tips" in itinerary_text:
-        itinerary_text = itinerary_text.replace("## Practical Tips", images_section + "## Practical Tips")
-    else:
-        # If no practical tips section, add images at the end
-        itinerary_text += images_section
+    # Add remaining images at the end
+    remaining_images = {k: v for k, v in image_urls.items() 
+                       if not k.startswith('🏨') and not k.startswith('📍')}
+    if remaining_images:
+        images_section = "\n\n## 📸 Additional Destination Images\n\n"
+        for title, url in remaining_images.items():
+            if url and url.startswith('http') and len(url) > 10:
+                images_section += f"### {title}\n\n"
+                images_section += f"![{title}]({url})\n\n"
+                print(f"🖼️  [ITINERARY-IMAGES] Added additional image: {title}")
+        
+        # Insert before practical tips or at the end
+        if "## Practical Travel Tips" in enhanced_itinerary:
+            enhanced_itinerary = enhanced_itinerary.replace("## Practical Travel Tips", 
+                                                           images_section + "## Practical Travel Tips")
+        else:
+            enhanced_itinerary += images_section
 
-    return itinerary_text
+    return enhanced_itinerary
 
 
 def extract_image_urls_from_data(hotels_info: str, sights_info: str) -> dict:

@@ -892,6 +892,7 @@ select.form-control {
 input[type="date"] {
     position: relative;
     cursor: pointer;
+    color: #1e293b !important;
 }
 
 /* Specific fixes for date inputs */
@@ -903,6 +904,7 @@ input[type="date"] {
 .form-floating input[type="date"]:focus {
     padding-top: 1.4rem;
     padding-bottom: 0.625rem;
+    color: #1e293b !important;
 }
 
 .form-floating input[type="date"].has-value {
@@ -927,6 +929,30 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
     filter: invert(0.6);
     transform: translateY(-50%) scale(1.05);
+}
+
+/* Ensure all form text is visible */
+.form-floating label,
+.form-text,
+.form-text small {
+    color: #64748b !important;
+}
+
+.form-floating .form-control:focus ~ label,
+.form-floating .form-control:not(:placeholder-shown) ~ label {
+    color: var(--primary-color) !important;
+}
+
+/* Budget input specific styling */
+#budget_amount {
+    color: #1e293b !important;
+    font-weight: 600;
+}
+
+#budget_amount:focus {
+    color: #1e293b !important;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
 }
 
 /* Results Section */
@@ -2225,6 +2251,176 @@ body {
     border-radius: 0 8px 8px 0;
 }
 
+/* Enhanced styling for timing and currency in itinerary */
+.itinerary-section {
+    margin: 25px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.itinerary-subsection {
+    margin: 15px 0;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border-left: 3px solid var(--secondary-color);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timing-highlight {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    display: inline-block;
+    margin: 0 3px;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+    transform: translateY(-1px);
+}
+
+.currency-highlight {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.95em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    display: inline-block;
+    margin: 0 3px;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Enhanced Budget Styling for Web UI */
+.budget-section {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 2px solid #16a34a;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.budget-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.budget-table th {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.budget-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.85rem;
+}
+
+.budget-table tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+.budget-highlight {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    display: inline-block;
+    margin: 0 4px;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+    transform: translateY(-1px);
+}
+
+.budget-total {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white;
+    padding: 6px 15px;
+    border-radius: 25px;
+    font-weight: 800;
+    font-size: 1.1rem;
+    display: inline-block;
+    box-shadow: 0 4px 8px rgba(30, 64, 175, 0.3);
+    transform: translateY(-1px);
+}
+
+.budget-warning {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+    transform: translateY(-1px);
+}
+
+.budget-success {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Budget feedback styling */
+.budget-feedback {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    animation: fadeIn 0.3s ease-in-out;
+    color: #1e293b !important;
+}
+
+.budget-feedback .budget-total {
+    font-size: 0.85rem;
+    color: white !important;
+}
+
+.budget-feedback .budget-highlight,
+.budget-feedback .budget-warning,
+.budget-feedback .budget-success {
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    color: white !important;
+}
+
+.budget-feedback .small,
+.budget-feedback span {
+    color: #1e293b !important;
+}
+
+.budget-feedback .text-muted {
+    color: #64748b !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* Flight Cards Styling */
 .flight-card {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
@@ -3391,9 +3587,14 @@ body {
 
 .time-info {
     font-size: 16px;
-    font-weight: 600;
-    color: var(--text-color);
+    font-weight: 700;
+    color: #dc2626;
     margin: 4px 0;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(239, 68, 68, 0.1));
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    display: inline-block;
 }
 
 .location-label {

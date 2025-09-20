@@ -656,8 +656,96 @@ document.addEventListener('DOMContentLoaded', function() {
         currencySelect.value = 'USD';
     }
     
+    // Setup budget feedback
+    setupBudgetFeedback();
+    
     // Form submission is handled by the main event listener below
 });
+
+// Budget feedback functionality
+function setupBudgetFeedback() {
+    const budgetInput = document.getElementById('budget_amount');
+    const currencySelect = document.getElementById('currency');
+    const adultsInput = document.getElementById('adults');
+    const childrenInput = document.getElementById('children');
+    const seniorsInput = document.getElementById('seniors');
+    const childrenUnder5Input = document.getElementById('children_under_5');
+    
+    if (!budgetInput) return;
+    
+    function updateBudgetFeedback() {
+        const budget = parseFloat(budgetInput.value);
+        const currency = currencySelect?.value || 'USD';
+        const symbol = currency === 'USD' ? '$' : '₹';
+        
+        if (!budget || budget <= 0) {
+            removeBudgetFeedback();
+            return;
+        }
+        
+        // Calculate total travelers
+        const adults = parseInt(adultsInput?.value) || 1;
+        const children = parseInt(childrenInput?.value) || 0;
+        const seniors = parseInt(seniorsInput?.value) || 0;
+        const childrenUnder5 = parseInt(childrenUnder5Input?.value) || 0;
+        const totalTravelers = adults + children + seniors + childrenUnder5;
+        
+        const perPersonBudget = budget / totalTravelers;
+        
+        // Determine budget category
+        let category = '';
+        let categoryClass = '';
+        if (perPersonBudget < 500) {
+            category = 'Budget-friendly';
+            categoryClass = 'budget-warning';
+        } else if (perPersonBudget < 1500) {
+            category = 'Mid-range';
+            categoryClass = 'budget-highlight';
+        } else if (perPersonBudget < 3000) {
+            category = 'Comfortable';
+            categoryClass = 'budget-success';
+        } else {
+            category = 'Luxury';
+            categoryClass = 'budget-total';
+        }
+        
+        // Create or update feedback
+        let feedback = budgetInput.parentNode.querySelector('.budget-feedback');
+        if (!feedback) {
+            feedback = document.createElement('div');
+            feedback.className = 'budget-feedback mt-2';
+            budgetInput.parentNode.appendChild(feedback);
+        }
+        
+        feedback.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small">
+                    <span class="budget-total">${symbol}${budget.toLocaleString()}</span> total for ${totalTravelers} traveler${totalTravelers > 1 ? 's' : ''}
+                </span>
+                <span class="${categoryClass} small">${symbol}${Math.round(perPersonBudget).toLocaleString()} per person</span>
+            </div>
+            <div class="small text-muted mt-1">
+                <i class="fas fa-tag me-1"></i>${category} travel style
+            </div>
+        `;
+    }
+    
+    function removeBudgetFeedback() {
+        const feedback = budgetInput.parentNode.querySelector('.budget-feedback');
+        if (feedback) {
+            feedback.remove();
+        }
+    }
+    
+    // Add event listeners
+    budgetInput.addEventListener('input', updateBudgetFeedback);
+    budgetInput.addEventListener('change', updateBudgetFeedback);
+    currencySelect?.addEventListener('change', updateBudgetFeedback);
+    adultsInput?.addEventListener('change', updateBudgetFeedback);
+    childrenInput?.addEventListener('change', updateBudgetFeedback);
+    seniorsInput?.addEventListener('change', updateBudgetFeedback);
+    childrenUnder5Input?.addEventListener('change', updateBudgetFeedback);
+}
 
 // Removed legacy browser search mode toggle and related DOM references
 // Language selection
@@ -1679,6 +1767,13 @@ function formatFlights(flights) {
             const destination = flight.destination || 'N/A';
             const arrivalTime = flight.arrivalTime || 'N/A';
             const duration = flight.duration || 'N/A';
+            
+            // Debug only if timing data is missing
+            if (departureTime === 'N/A' || arrivalTime === 'N/A') {
+                console.log('⚠️ [FORMAT-FLIGHTS] Missing timing data:', {
+                    airline, flightNumber, origin, departureTime, destination, arrivalTime, duration
+                });
+            }
             const aircraft = flight.aircraft || '';
             const price = flight.price || 'Price not available';
             const layover = flight.layover || '';
@@ -2291,11 +2386,77 @@ function formatItinerary(itineraryData) {
             smartypants: true
         });
         
+        // Enhance the HTML content with better styling and structure
+        let enhancedContent = htmlContent;
+        
+        // Add special styling for common itinerary sections
+        enhancedContent = enhancedContent.replace(/(<h2>(?:Day \d+|Daily Itinerary|Flight Details|Accommodation Strategy|Travel Information)[^<]*<\/h2>)/gi, 
+            '<div class="itinerary-section">$1');
+        enhancedContent = enhancedContent.replace(/(<h3>)/gi, '</div><div class="itinerary-subsection">$1');
+        
+        // Add proper closing divs
+        if (enhancedContent.includes('itinerary-section')) {
+            enhancedContent += '</div>';
+        }
+        if (enhancedContent.includes('itinerary-subsection')) {
+            enhancedContent += '</div>';
+        }
+        
+        // Enhance flight timing information
+        enhancedContent = enhancedContent.replace(/(\d{1,2}:\d{2}\s*(?:AM|PM))/gi, 
+            '<span class="timing-highlight">$1</span>');
+        
+        // Enhance currency information
+        enhancedContent = enhancedContent.replace(/([₹$]\d+(?:,\d{3})*(?:\.\d{2})?)/gi, 
+            '<span class="currency-highlight">$1</span>');
+        
+        // Enhance budget sections with proper styling
+        enhancedContent = enhancedContent.replace(/(### \d+\.\s*\*\*Budget.*?\*\*|## \*\*Budget.*?\*\*)/gi,
+            '<div class="budget-section">$1');
+        
+        // Convert budget tables to proper HTML tables with styling
+        enhancedContent = enhancedContent.replace(/\|([^|]+\|[^|]+\|[^|]+)\|/g, function(match, content) {
+            // Check if this is a table header row
+            if (content.includes('Category') && content.includes('Cost') && content.includes('Type')) {
+                const cells = content.split('|').filter(cell => cell.trim());
+                return '<table class="budget-table"><thead><tr>' + 
+                       cells.map(cell => `<th>${cell.trim()}</th>`).join('') + 
+                       '</tr></thead><tbody>';
+            } 
+            // Skip separator lines
+            else if (content.includes('---')) {
+                return '';
+            } 
+            // Check if this is a data row with currency
+            else if (content.includes('₹') || content.includes('$') || content.includes('TOTAL') || content.includes('PER PERSON')) {
+                const cells = content.split('|').filter(cell => cell.trim());
+                return '<tr>' + 
+                       cells.map(cell => `<td>${cell.trim()}</td>`).join('') + 
+                       '</tr>';
+            }
+            return match;
+        });
+        
+        // Close budget tables
+        if (enhancedContent.includes('<table class="budget-table">')) {
+            enhancedContent = enhancedContent.replace(/(<tbody>[\s\S]*?)(?=\n\n|\n#|$)/g, '$1</tbody></table></div>');
+        }
+        
+        // Style budget highlights
+        enhancedContent = enhancedContent.replace(/(TOTAL BUDGET|OVERALL TRIP BUDGET).*?([₹$]\d+(?:,\d{3})*)/gi,
+            '$1: <span class="budget-total">$2</span>');
+        enhancedContent = enhancedContent.replace(/(PER PERSON BUDGET|PER PERSON ALLOCATION).*?([₹$]\d+(?:,\d{3})*)/gi,
+            '$1: <span class="budget-highlight">$2</span>');
+        enhancedContent = enhancedContent.replace(/Over budget by ([₹$]\d+(?:,\d{3})*)/gi,
+            'Over budget by <span class="budget-warning">$1</span>');
+        enhancedContent = enhancedContent.replace(/Within budget with ([₹$]\d+(?:,\d{3})*)/gi,
+            'Within budget with <span class="budget-success">$1</span>');
+        
         // Create a container with proper styling
         return `
             <div class="itinerary-content">
                 <div class="markdown-body">
-                    ${htmlContent}
+                    ${enhancedContent}
                 </div>
             </div>
         `;
@@ -2563,8 +2724,6 @@ function handleLogout() {
 // Data Parsing Functions
 function parseFlightsData(flightsString) {
     try {
-        console.log('🔍 [PARSE-FLIGHTS] Raw flights data:', flightsString);
-        
         if (!flightsString || flightsString.trim() === '') {
             console.log('⚠️ [PARSE-FLIGHTS] Empty flights data');
             return [];
@@ -2586,7 +2745,6 @@ function parseFlightsData(flightsString) {
         
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            console.log('🔍 [PARSE-FLIGHTS] Processing line:', line);
             
             // Check if this is a flight line (contains airline and route info)
             if (line.includes(' - ') && (line.includes(' -> ') || line.includes('(') && line.includes(')'))) {
@@ -2669,6 +2827,33 @@ function parseFlightsData(flightsString) {
                     }
                 }
                 
+                // Pattern 5: More flexible pattern to catch timing data
+                if (!parsed) {
+                    // Look for patterns like: "anything - ABC (time) -> XYZ (time) [duration] - anything"
+                    match = line.match(/^(.+?)\s+-\s+([A-Z]{3})\s*\(([^)]+)\)\s*->\s*([A-Z]{3})\s*\(([^)]+)\)\s*\[([^\]]+)\]/);
+                    if (match) {
+                        const airlinePart = match[1].trim();
+                        
+                        // Try to separate airline and flight number from the first part
+                        const airlineFlightMatch = airlinePart.match(/^(.+?)\s+([A-Z0-9]+)$/);
+                        if (airlineFlightMatch) {
+                            currentFlight.airline = airlineFlightMatch[1].trim();
+                            currentFlight.flightNumber = airlineFlightMatch[2].trim();
+                        } else {
+                            currentFlight.airline = airlinePart;
+                            currentFlight.flightNumber = '';
+                        }
+                        
+                        currentFlight.origin = match[2].trim();
+                        currentFlight.departureTime = match[3].trim();
+                        currentFlight.destination = match[4].trim();
+                        currentFlight.arrivalTime = match[5].trim();
+                        currentFlight.duration = match[6].trim();
+                        currentFlight.aircraft = '';
+                        parsed = true;
+                    }
+                }
+                
                 // If no pattern matched, try to extract basic info
                 if (!parsed) {
                     const parts = line.split(' - ');
@@ -2701,7 +2886,18 @@ function parseFlightsData(flightsString) {
                     }
                 }
                 
-                console.log('🔍 [PARSE-FLIGHTS] Parsed flight:', currentFlight);
+                if (!parsed) {
+                    console.log('❌ [PARSE-FLIGHTS] No pattern matched for line:', line);
+                }
+                
+                // Debug times only if there's an issue
+                if (parsed && (!currentFlight.departureTime || !currentFlight.arrivalTime)) {
+                    console.log('⚠️ [PARSE-FLIGHTS] Missing time data:', {
+                        line: line,
+                        departure: currentFlight.departureTime,
+                        arrival: currentFlight.arrivalTime
+                    });
+                }
             } 
             // Check for layover information
             else if (line.includes('Layover at') || line.includes('Layover:')) {

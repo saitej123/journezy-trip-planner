@@ -68,10 +68,13 @@ From the user's request, you need to extract the following comprehensive informa
 - **For families with children**: Prioritize airports with family amenities, shorter security lines, and easier navigation
 - **For senior travelers**: Choose airports with accessible services, shorter walking distances, and senior-friendly facilities
 - **For mixed groups**: Balance convenience for all passenger types
+- **CRITICAL**: Always provide EXACT 3-letter IATA codes (e.g., JFK, LHR, DXB) - NO CITIES OR FULL NAMES
 - **Examples of smart selections**:
   * London: LHR (comprehensive services) > LGW (family-friendly) > STN (budget-focused)
   * New York: JFK (international hub) > EWR (accessible) > LGA (domestic convenience)
   * Dubai: DXB (full-service) > DWC (newer, less crowded) > SHJ (budget option)
+  * Mumbai: BOM (main hub) > CCU (alternative) > DEL (connecting option)
+  * Delhi: DEL (primary hub) > BOM (secondary) > CCU (tertiary)
 
 ## Traveler Intelligence:
 - Analyze the request for implicit traveler information (family trip, business travel, romantic getaway, adventure travel)

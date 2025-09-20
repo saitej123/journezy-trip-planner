@@ -79,36 +79,90 @@ def format_one_flight(
     airline: str,
     airplane: str,
 ) -> str:
-    return f"{airline} {flight_no} - {dep_port} ({dep_time}) -> {arr_port} ({arr_time}) [{format_minutes(duration)}] - {airplane}"
+    # Ensure we have readable timing format
+    dep_time_clean = dep_time.replace('AM', ' AM').replace('PM', ' PM') if dep_time else 'N/A'
+    arr_time_clean = arr_time.replace('AM', ' AM').replace('PM', ' PM') if arr_time else 'N/A'
+    duration_clean = format_minutes(duration) if duration else 'N/A'
+    
+    # Debug only when there are issues with the data
+    if dep_time == 'N/A' or arr_time == 'N/A' or duration == 0:
+        print(f"⚠️ [FORMAT-ONE-FLIGHT] Missing data - Times: {dep_time}/{arr_time}, Duration: {duration}")
+    
+    result = f"{airline} {flight_no} - {dep_port} ({dep_time_clean}) -> {arr_port} ({arr_time_clean}) [{duration_clean}] - {airplane}"
+    return result
 
 
 def get_formatted_flights_info(flights: list, currency_code: str = "USD") -> str:
-    symbol = "$" if currency_code.upper() == "USD" else "₹"
+    # Ensure consistent currency symbol mapping
+    currency_upper = currency_code.upper()
+    if currency_upper == "USD":
+        symbol = "$"
+    elif currency_upper == "INR":
+        symbol = "₹" 
+    else:
+        symbol = "$"  # Default fallback
+        
     formatted_flights = []
     for flight in flights:
         for part in flight["flights"]:
-            formatted_flights.append(
-                format_one_flight(
-                    part["flight_number"],
-                    part["departure_airport"]["id"],
-                    part["arrival_airport"]["id"],
-                    part["departure_airport"]["time"],
-                    part["arrival_airport"]["time"],
-                    part["duration"],
-                    part["airline"],
-                    part["airplane"],
-                )
+            # Ensure all flight data fields exist with fallbacks
+            flight_number = part.get("flight_number", "N/A")
+            dep_airport_id = part.get("departure_airport", {}).get("id", "N/A")
+            arr_airport_id = part.get("arrival_airport", {}).get("id", "N/A")
+            dep_time = part.get("departure_airport", {}).get("time", "N/A")
+            arr_time = part.get("arrival_airport", {}).get("time", "N/A")
+            duration = part.get("duration", 0)
+            airline = part.get("airline", "Unknown Airline")
+            airplane = part.get("airplane", "N/A")
+            
+            # Debug only if time extraction fails
+            if dep_time == "N/A" or arr_time == "N/A":
+                print(f"⚠️ [FLIGHT-FORMAT] Missing time data - Departure: {dep_time}, Arrival: {arr_time}")
+                print(f"⚠️ [FLIGHT-FORMAT] Full part data: {part}")
+            
+            formatted_flight_line = format_one_flight(
+                flight_number,
+                dep_airport_id,
+                arr_airport_id,
+                dep_time,
+                arr_time,
+                duration,
+                airline,
+                airplane,
             )
+            formatted_flights.append(formatted_flight_line)
         if "layovers" in flight and len(flight["layovers"]) > 0:
+            layover_duration = flight["layovers"][0].get("duration", 0)
+            layover_id = flight["layovers"][0].get("id", "Unknown")
             formatted_flights.append(
-                f"Layover at {flight['layovers'][0]['id']}: {format_minutes(flight['layovers'][0]['duration'])}"
+                f"Layover at {layover_id}: {format_minutes(layover_duration)}"
             )
+        
+        total_duration = flight.get("total_duration", 0)
         formatted_flights.append(
-            f"Total Duration: {format_minutes(flight['total_duration'])}"
+            f"Total Duration: {format_minutes(total_duration)}"
         )
-        formatted_flights.append(f"Price ({currency_code.upper()}): {symbol}{flight['price']}")
+        
+        # Ensure price formatting is consistent
+        price = flight.get("price", 0)
+        try:
+            # Remove any existing currency symbols from price
+            price_clean = str(price).replace("$", "").replace("₹", "").replace(",", "")
+            price_float = float(price_clean)
+            formatted_flights.append(f"Price ({currency_upper}): {symbol}{price_float:,.0f}")
+        except (ValueError, TypeError):
+            formatted_flights.append(f"Price ({currency_upper}): {symbol}N/A")
+        
         formatted_flights.append("")
-    return "\n".join(formatted_flights)
+    
+    final_output = "\n".join(formatted_flights)
+    
+    # Only debug if there seems to be an issue with the output
+    if "N/A" in final_output:
+        print(f"⚠️ [FLIGHT-FORMAT] Output contains N/A values:")
+        print(f"📄 [FLIGHT-FORMAT] {final_output}")
+    
+    return final_output
 
 
 def find_flights(

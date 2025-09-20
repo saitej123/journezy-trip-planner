@@ -9,7 +9,14 @@ load_dotenv()
 
 
 def get_formatted_hotels_info(hotels: list, currency_code: str = "USD") -> str:
-    symbol = "$" if currency_code.upper() == "USD" else "₹"
+    # Ensure consistent currency symbol mapping
+    currency_upper = currency_code.upper()
+    if currency_upper == "USD":
+        symbol = "$"
+    elif currency_upper == "INR":
+        symbol = "₹"
+    else:
+        symbol = "$"  # Default fallback
     formatted_hotels = []
     for hotel in hotels:
         name = hotel.get("name", "Hotel")
@@ -42,10 +49,17 @@ def get_formatted_hotels_info(hotels: list, currency_code: str = "USD") -> str:
 
         formatted_hotels.append(name)
         if rate_per_night:
-            # Ensure value comes formatted with currency symbol for consistency
-            rate_text = str(rate_per_night)
-            if not any(s in rate_text for s in ["$", "₹", "USD", "INR"]):
-                rate_text = f"{symbol}{rate_text}"
+            # Clean and format price consistently
+            try:
+                # Remove any existing currency symbols and clean the price
+                rate_clean = str(rate_per_night).replace("$", "").replace("₹", "").replace(",", "").strip()
+                rate_float = float(rate_clean)
+                rate_text = f"{symbol}{rate_float:,.0f}"
+            except (ValueError, TypeError):
+                # If conversion fails, use original text with proper symbol
+                rate_text = str(rate_per_night)
+                if not any(s in rate_text for s in ["$", "₹"]):
+                    rate_text = f"{symbol}{rate_text}"
             formatted_hotels.append(f"Rate per night: {rate_text}")
         else:
             formatted_hotels.append("Rate per night: N/A")
