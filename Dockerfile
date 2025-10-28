@@ -6,13 +6,19 @@ WORKDIR /app
 
 # Install wkhtmltopdf and Xvfb
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    pkg-config \
+    libcairo2-dev \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
-
 
 # Copy requirements file
 COPY requirements.txt .
 
 # Install Python dependencies
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 
