@@ -16,5 +16,4 @@ pydantic[email]
 lxml_html_clean
 pydantic[email]
 gh-md-to-html[pdf_export]
-xhtml2pdf
 markdown

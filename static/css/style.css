@@ -289,59 +289,14 @@ body {
     padding: 1rem 1.25rem;
 }
 
-/* Smart Defaults Visual States */
+/* Smart Defaults Visual States - REMOVED ALL DISABLING STYLES */
+/* Options should ALWAYS be clickable and fully visible */
 .form-check.smart-defaults-active {
-    background: linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(16,185,129,0.05) 100%);
-    border: 1px solid rgba(37,99,235,0.2);
-    border-radius: 10px;
-    padding: 0.75rem;
-    margin: 0.25rem 0;
-    position: relative;
-}
-
-.form-check.smart-defaults-active::before {
-    content: "✨ Auto-selected";
-    position: absolute;
-    top: -8px;
-    right: 10px;
-    background: var(--primary-color);
-    color: white;
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 600;
+    /* NO visual changes - options stay fully enabled */
 }
 
 .form-check.disabled {
-    opacity: 0.5;
-    pointer-events: none;
-    background: rgba(0,0,0,0.02);
-    border-radius: 10px;
-    padding: 0.75rem;
-    margin: 0.25rem 0;
-    position: relative;
-}
-
-.form-check.disabled::after {
-    content: "Disabled by Smart Defaults";
-    position: absolute;
-    top: -8px;
-    right: 10px;
-    background: var(--gray-400);
-    color: white;
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: 500;
-}
-
-.form-check.disabled .form-check-input {
-    opacity: 0.4;
-}
-
-.form-check.disabled .form-check-label {
-    opacity: 0.6;
-    text-decoration: line-through;
+    /* REMOVED - all options must remain fully clickable */
 }
 
 /* Enhanced Date Input Styling */
@@ -503,33 +458,8 @@ input[type="date"].form-control.auto-corrected {
     100% { background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(245,158,11,0.05) 100%); }
 }
 
-/* Smart Defaults Disabled State */
-.form-check.disabled {
-    opacity: 0.5 !important;
-    pointer-events: none !important;
-    transition: var(--transition);
-}
-
-.form-check.disabled .form-check-label {
-    color: var(--gray-400) !important;
-    cursor: not-allowed;
-}
-
-.form-check.disabled .form-check-input {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-/* Visual feedback for smart defaults */
-.smart-defaults-active .form-check-input:checked {
-    background-color: var(--success-color);
-    border-color: var(--success-color);
-}
-
-.smart-defaults-active .form-check-label {
-    font-weight: 600;
-    color: var(--success-color);
-}
+/* Smart Defaults - NO disabling styles */
+/* ALL options must remain fully enabled and clickable at all times */
 
 /* Preloader */
 .preloader {

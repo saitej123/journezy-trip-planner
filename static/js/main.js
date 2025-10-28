@@ -224,13 +224,7 @@ function setupTravellerLogic() {
         const childFlightContainer = childFriendlyFlightCheckbox.closest('.form-check');
         const seniorFlightContainer = seniorFriendlyFlightCheckbox.closest('.form-check');
 
-        // Reset all checkboxes and enable all containers first
-        toddlerFriendlyCheckbox.checked = false;
-        seniorFriendlyCheckbox.checked = false;
-        childFriendlyFlightCheckbox.checked = false;
-        seniorFriendlyFlightCheckbox.checked = false;
-        
-        // Remove any previous styling and classes
+        // ALWAYS enable all containers - NO restrictions ever!
         [toddlerContainer, seniorContainer, childFlightContainer, seniorFlightContainer].forEach(container => {
             if (container) {
                 container.style.opacity = '1';
@@ -239,81 +233,29 @@ function setupTravellerLogic() {
             }
         });
 
-        // Priority logic: if both children and seniors, prioritize based on higher count
+        // Smart defaults: auto-check based on passengers - BOTH can be selected!
         if (totalChildren > 0 && totalSeniors > 0) {
-            if (totalChildren >= totalSeniors) {
-                // Prioritize child-friendly and disable senior options
-                console.log('[SMART-DEFAULTS] Selecting child-friendly (children >= seniors)');
-                toddlerFriendlyCheckbox.checked = true;
-                childFriendlyFlightCheckbox.checked = true;
-                
-                // Add active class to selected options
-                if (toddlerContainer) toddlerContainer.classList.add('smart-defaults-active');
-                if (childFlightContainer) childFlightContainer.classList.add('smart-defaults-active');
-                
-                // Visually disable senior options
-                if (seniorContainer) {
-                    seniorContainer.classList.add('disabled');
-                }
-                if (seniorFlightContainer) {
-                    seniorFlightContainer.classList.add('disabled');
-                }
-            } else {
-                // Prioritize senior-friendly and disable child options
-                console.log('[SMART-DEFAULTS] Selecting senior-friendly (seniors > children)');
-                seniorFriendlyCheckbox.checked = true;
-                seniorFriendlyFlightCheckbox.checked = true;
-                
-                // Add active class to selected options
-                if (seniorContainer) seniorContainer.classList.add('smart-defaults-active');
-                if (seniorFlightContainer) seniorFlightContainer.classList.add('smart-defaults-active');
-                
-                // Visually disable child options
-                if (toddlerContainer) {
-                    toddlerContainer.classList.add('disabled');
-                }
-                if (childFlightContainer) {
-                    childFlightContainer.classList.add('disabled');
-                }
-            }
-        } else if (totalChildren > 0) {
-            // Only children - enable child-friendly, disable senior
-            console.log('[SMART-DEFAULTS] Selecting child-friendly (only children)');
+            // Multi-generational: SELECT BOTH!
+            console.log('[SMART-DEFAULTS] Auto-selecting BOTH toddler-friendly AND senior-friendly');
             toddlerFriendlyCheckbox.checked = true;
-            childFriendlyFlightCheckbox.checked = true;
-            
-            // Add active class to selected options
-            if (toddlerContainer) toddlerContainer.classList.add('smart-defaults-active');
-            if (childFlightContainer) childFlightContainer.classList.add('smart-defaults-active');
-            
-            // Disable senior options
-            if (seniorContainer) {
-                seniorContainer.classList.add('disabled');
-            }
-            if (seniorFlightContainer) {
-                seniorFlightContainer.classList.add('disabled');
-            }
-        } else if (totalSeniors > 0) {
-            // Only seniors - enable senior-friendly, disable child
-            console.log('[SMART-DEFAULTS] Selecting senior-friendly (only seniors)');
             seniorFriendlyCheckbox.checked = true;
-            seniorFriendlyFlightCheckbox.checked = true;
-            
-            // Add active class to selected options
-            if (seniorContainer) seniorContainer.classList.add('smart-defaults-active');
-            if (seniorFlightContainer) seniorFlightContainer.classList.add('smart-defaults-active');
-            
-            // Disable child options
-            if (toddlerContainer) {
-                toddlerContainer.classList.add('disabled');
-            }
-            if (childFlightContainer) {
-                childFlightContainer.classList.add('disabled');
-            }
+        } else if (totalChildren > 0) {
+            // Only children
+            console.log('[SMART-DEFAULTS] Auto-selecting toddler-friendly');
+            toddlerFriendlyCheckbox.checked = true;
+            seniorFriendlyCheckbox.checked = false;
+        } else if (totalSeniors > 0) {
+            // Only seniors
+            console.log('[SMART-DEFAULTS] Auto-selecting senior-friendly');
+            toddlerFriendlyCheckbox.checked = false;
+            seniorFriendlyCheckbox.checked = true;
         } else {
-            console.log('[SMART-DEFAULTS] No children or seniors, all options available');
-            // All options remain available and unchecked
+            // No passengers: uncheck both
+            console.log('[SMART-DEFAULTS] No special passengers');
+            toddlerFriendlyCheckbox.checked = false;
+            seniorFriendlyCheckbox.checked = false;
         }
+        // Flight preferences: user controls completely - NO auto-selection
     }
 
     // Add event listeners to update friendly options when traveller numbers change
@@ -339,50 +281,13 @@ function setupTravellerLogic() {
         seniorsInput.addEventListener('blur', updateFriendlyOptions);
     }
 
-    // Add mutual exclusion logic for manual checkbox changes
-    if (childFriendlyFlightCheckbox && seniorFriendlyFlightCheckbox) {
-        childFriendlyFlightCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                seniorFriendlyFlightCheckbox.checked = false;
-                console.log('[FLIGHT-PREFERENCES] Child-friendly selected, deselected senior-friendly (mutual exclusion)');
-                
-                // Add visual feedback
-                const seniorContainer = seniorFriendlyFlightCheckbox.closest('.form-check');
-                if (seniorContainer) {
-                    seniorContainer.classList.add('disabled');
-                    setTimeout(() => seniorContainer.classList.remove('disabled'), 1000);
-                }
-            }
-        });
-        
-        seniorFriendlyFlightCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                childFriendlyFlightCheckbox.checked = false;
-                console.log('[FLIGHT-PREFERENCES] Senior-friendly selected, deselected child-friendly (mutual exclusion)');
-                
-                // Add visual feedback
-                const childContainer = childFriendlyFlightCheckbox.closest('.form-check');
-                if (childContainer) {
-                    childContainer.classList.add('disabled');
-                    setTimeout(() => childContainer.classList.remove('disabled'), 1000);
-                }
-            }
-        });
-    }
-
-    if (toddlerFriendlyCheckbox && seniorFriendlyCheckbox) {
-        toddlerFriendlyCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                seniorFriendlyCheckbox.checked = false;
-            }
-        });
-        
-        seniorFriendlyCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                toddlerFriendlyCheckbox.checked = false;
-            }
-        });
-    }
+    // NO mutual exclusion for flight preferences - users can select both if they want
+    // Users are free to choose any combination of flight timing preferences
+    console.log('[FLIGHT-PREFERENCES] Users can select any combination of flight timing preferences');
+    
+    // NO mutual exclusion for Special Options - users can select both toddler-friendly AND senior-friendly
+    // This allows for multi-generational trips or trips with both children and seniors
+    console.log('[SPECIAL-OPTIONS] All options are independently selectable - no restrictions');
 
     // Make the function globally available for debugging
     window.updateFriendlyOptionsGlobal = updateFriendlyOptions;
@@ -2084,123 +1989,112 @@ async function downloadPDF() {
 
     // Log to server
     try {
-        console.log('📡 [DOWNLOAD-PDF] Sending download log to server...');
-        const response = await fetch('/log-download', {
+        await fetch('/log-download', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
-        console.log('✅ [DOWNLOAD-PDF] Server log sent successfully');
     } catch (error) {
         console.warn('⚠️ [DOWNLOAD-PDF] Failed to log to server:', error);
     }
 
+    // Check if we have PDF data from backend
     if (!window.pdfData) {
-        console.error('❌ [DOWNLOAD-PDF] No PDF data available in window.pdfData');
-        showError('No PDF data available for download. Please generate a trip itinerary first.');
+        console.error('❌ [DOWNLOAD-PDF] No PDF data available');
+        showError('No itinerary data available for download. Please generate a trip itinerary first.');
         return;
     }
 
-    console.log(`📊 [DOWNLOAD-PDF] PDF data length: ${window.pdfData.length} characters`);
-    console.log(`🔍 [DOWNLOAD-PDF] PDF data preview: ${window.pdfData.substring(0, 100)}...`);
-
     try {
-        console.log('🔄 [DOWNLOAD-PDF] Converting base64 to binary...');
-        // Support optional data URLs and detect markdown/plain text
-        let raw = window.pdfData || '';
-        const docType = (window.documentType || '').toLowerCase();
-        if (raw.startsWith('data:')) {
-            const commaIdx = raw.indexOf(',');
-            if (commaIdx !== -1) raw = raw.substring(commaIdx + 1);
+        const documentType = window.documentType || 'markdown';
+        console.log(`📄 [DOWNLOAD-PDF] Document type: ${documentType}`);
+        console.log(`📊 [DOWNLOAD-PDF] PDF data length: ${window.pdfData.length} characters`);
+
+        // Show loading state
+        const downloadBtn = document.getElementById('downloadPdfBtn');
+        if (downloadBtn) {
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Downloading...';
+            downloadBtn.disabled = true;
+            
+            // Reset after 5 seconds as backup
+            setTimeout(() => {
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            }, 5000);
         }
 
-        // If not clearly base64 or server sent markdown, fall back to text download
-        const cleaned = raw.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
-        const base64Regex = /^[A-Za-z0-9+/=]+$/;
-        const looksLikeBase64 = base64Regex.test(cleaned) && cleaned.length > 1000; // PDFs should be substantial
-        const shouldDownloadAsText = docType === 'markdown' || !looksLikeBase64 || raw.includes('#') || raw.includes('*');
-
-        if (shouldDownloadAsText) {
-            console.log('📝 [DOWNLOAD-PDF] Detected text/markdown format, downloading as text file');
-            const blob = new Blob([window.pdfData], { type: docType === 'markdown' ? 'text/markdown' : 'text/plain' });
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = docType === 'markdown' ? 'trip-itinerary.md' : 'trip-itinerary.txt';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(link.href);
-            return;
+        if (documentType === 'pdf') {
+            // Backend provided a PDF - download it directly
+            console.log('📥 [DOWNLOAD-PDF] Downloading backend-generated PDF...');
+            
+            try {
+                // Decode base64 PDF data
+                const base64Data = window.pdfData;
+                console.log('🔄 [DOWNLOAD-PDF] Decoding base64 data...');
+                
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                console.log(`✅ [DOWNLOAD-PDF] Decoded ${bytes.length} bytes`);
+                
+                // Create blob and download
+                const blob = new Blob([bytes], { type: 'application/pdf' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `travel-itinerary-${new Date().toISOString().split('T')[0]}.pdf`;
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                console.log('✅ [DOWNLOAD-PDF] PDF downloaded successfully');
+                
+                // Reset button state
+                if (downloadBtn) {
+                    downloadBtn.innerHTML = '<i class="fas fa-download me-2"></i>Download PDF';
+                    downloadBtn.disabled = false;
+                }
+                
+                return;
+            } catch (pdfError) {
+                console.error('❌ [DOWNLOAD-PDF] Error downloading PDF:', pdfError);
+                showError('Error downloading PDF. Please try again.');
+                
+                // Reset button state
+                if (downloadBtn) {
+                    downloadBtn.innerHTML = '<i class="fas fa-download me-2"></i>Download PDF';
+                    downloadBtn.disabled = false;
+                }
+            }
+        } else {
+            // Markdown fallback - show message
+            console.log('📝 [DOWNLOAD-PDF] Backend sent markdown, not PDF');
+            showError('PDF generation is not available. The backend is sending markdown instead.');
+            
+            // Reset button state
+            if (downloadBtn) {
+                downloadBtn.innerHTML = '<i class="fas fa-download me-2"></i>Download PDF';
+                downloadBtn.disabled = false;
+            }
         }
-
-        // Pad base64 if needed and convert to binary
-        let padded = cleaned;
-        const mod = padded.length % 4;
-        if (mod === 2) padded += '==';
-        else if (mod === 3) padded += '=';
-        else if (mod === 1) {
-            console.warn('⚠️ [DOWNLOAD-PDF] Invalid base64 length, forcing text fallback');
-            const blob = new Blob([window.pdfData], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = 'trip-itinerary.txt';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(link.href);
-            return;
-        }
-
-        const byteCharacters = atob(padded);
-        console.log(`✅ [DOWNLOAD-PDF] Base64 decoded, byte length: ${byteCharacters.length}`);
-
-        // Verify this looks like a valid PDF
-        if (byteCharacters.length < 100 || !byteCharacters.startsWith('%PDF')) {
-            console.warn('⚠️ [DOWNLOAD-PDF] Data does not appear to be a valid PDF, falling back to text');
-            const blob = new Blob([window.pdfData], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = 'trip-itinerary.txt';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(link.href);
-            return;
-        }
-
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        console.log(`📦 [DOWNLOAD-PDF] Created Uint8Array, length: ${byteArray.length}`);
-
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
-        console.log(`📄 [DOWNLOAD-PDF] Created PDF blob, size: ${blob.size} bytes`);
-
-        // Create and click download link
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = `travel-itinerary-${new Date().toISOString().split('T')[0]}.pdf`;
-        console.log(`🔗 [DOWNLOAD-PDF] Created download link with URL: ${link.href}`);
-
-        document.body.appendChild(link); // Needed for Firefox
-        console.log('🎯 [DOWNLOAD-PDF] Clicking download link...');
-        link.click();
-        console.log('✅ [DOWNLOAD-PDF] Download initiated');
-
-        document.body.removeChild(link); // Clean up
-        window.URL.revokeObjectURL(link.href); // Clean up
-        console.log('🧹 [DOWNLOAD-PDF] Cleanup completed');
-
+        
     } catch (error) {
-        console.error('❌ [DOWNLOAD-PDF] Error downloading PDF:', error);
-        console.error('❌ [DOWNLOAD-PDF] Error stack:', error.stack);
+        console.error('❌ [DOWNLOAD-PDF] Error in download process:', error);
         showError('Error downloading PDF. Please try again.');
+        
+        // Reset button state
+        const downloadBtn = document.getElementById('downloadPdfBtn');
+        if (downloadBtn) {
+            downloadBtn.innerHTML = '<i class="fas fa-download me-2"></i>Download PDF';
+            downloadBtn.disabled = false;
+        }
     }
-
-    console.log('🏁 [DOWNLOAD-PDF] Download PDF function completed');
 }
 
 // Style action buttons
@@ -2924,4 +2818,3 @@ function parseFlightsData(flightsString) {
         return [fallbackFlight];
     }
 }
-

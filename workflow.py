@@ -962,7 +962,12 @@ class TourPlannerWorkflow:
                     current_place['rating'] = line
                 elif line.startswith('Price:'):
                     current_place['price'] = line
-                elif not line.startswith('Here are') and not line.startswith('Image:') and not current_place.get('name'):
+                elif line.startswith('Image:'):
+                    # Extract the image URL
+                    image_url = line.replace('Image:', '').strip()
+                    if image_url and image_url != 'N/A':
+                        current_place['image'] = image_url
+                elif not line.startswith('Here are') and not current_place.get('name'):
                     current_place['name'] = line
             
             if current_place:
@@ -976,43 +981,49 @@ class TourPlannerWorkflow:
         return places_html
 
     def _format_place_html(self, place_data: dict) -> str:
-        """Format individual place data as HTML"""
+        """Format individual place data as HTML with embedded images"""
         # Include image if available
         image_html = ""
         if 'image' in place_data and place_data['image'] and place_data['image'] != 'N/A':
             try:
                 from utils.image_handler import image_handler
-                image_html = image_handler.get_image_html(
+                print(f"🖼️ [PDF-GEN] Processing image for {place_data.get('name', 'Place')}: {place_data['image']}")
+                
+                # Get image as base64 data URI
+                image_data, is_fallback = image_handler.get_image_data(
                     image_url=place_data['image'],
-                    alt_text=place_data.get('name', 'Place'),
-                    fallback_type="no-image",
-                    max_width="200px",
-                    max_height="150px"
+                    fallback_type="no-image"
                 )
-            except ImportError:
-                # Fallback to simple image handling if utils not available
-                image_src = place_data['image']
-                if image_src.startswith('http') and 'placeholder.com' in image_src:
-                    image_src = "/static/images/fallbacks/no-image.png"
+                
+                if is_fallback:
+                    print(f"⚠️ [PDF-GEN] Using fallback image for {place_data.get('name', 'Place')}")
+                else:
+                    print(f"✅ [PDF-GEN] Successfully loaded image for {place_data.get('name', 'Place')}")
+                
+                # Create data URI
+                data_uri = f"data:image/png;base64,{image_data}"
                 
                 image_html = f"""
-                <div class="place-image-section">
-                    <img src="{image_src}" alt="{place_data.get('name', 'Place')}" 
-                         style="max-width: 200px; max-height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;" 
-                         onerror="this.src='/static/images/fallbacks/no-image.png';">
+                <div class="place-image-section" style="text-align: center; margin: 10px 0;">
+                    <img src="{data_uri}" 
+                         alt="{place_data.get('name', 'Place')}" 
+                         style="max-width: 200px; max-height: 150px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
                 </div>
                 """
+                
+            except Exception as e:
+                print(f"❌ [PDF-GEN] Error processing image for {place_data.get('name', 'Place')}: {str(e)}")
+                # Don't show broken image links
+                image_html = ""
         
         return f"""
         <div class="place-item">
-            <div class="place-header">
-                <div class="item-title">📍 {place_data.get('name', 'Attraction')}</div>
-                {f'<div class="place-price-tag">{place_data["price"]}</div>' if 'price' in place_data and place_data["price"] != 'N/A' else ''}
-            </div>
+            <div class="item-title">📍 {place_data.get('name', 'Attraction')}</div>
             {image_html}
             <div class="item-details">
-                {f'<div class="detail-item"><i class="fas fa-info-circle" style="color: #10b981; margin-right: 5px;"></i>{place_data["description"]}</div>' if 'description' in place_data and place_data["description"] != 'N/A' else ''}
-                {f'<div class="detail-item"><i class="fas fa-star" style="color: #f59e0b; margin-right: 5px;"></i>{place_data["rating"]}</div>' if 'rating' in place_data and place_data["rating"] != 'N/A' else ''}
+                {f'<div class="detail-item"><span class="icon">ℹ️</span> {place_data["description"]}</div>' if 'description' in place_data and place_data["description"] != 'N/A' else ''}
+                {f'<div class="detail-item"><span class="icon">⭐</span> {place_data["rating"]}</div>' if 'rating' in place_data and place_data["rating"] != 'N/A' else ''}
+                {f'<div class="detail-item"><span class="icon">💰</span> {place_data["price"]}</div>' if 'price' in place_data and place_data["price"] != 'N/A' else ''}
             </div>
         </div>
         """

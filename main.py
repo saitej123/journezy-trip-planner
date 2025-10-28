@@ -97,6 +97,18 @@ class TripRequest(BaseModel):
         default=False,
         description="Consider senior citizen-friendly activities and accommodations"
     )
+    wheelchair_accessible: bool = Field(
+        default=False,
+        description="Prioritize wheelchair-accessible venues and transportation"
+    )
+    vegetarian_preference: bool = Field(
+        default=False,
+        description="Include vegetarian dining options and restaurants"
+    )
+    non_vegetarian_preference: bool = Field(
+        default=False,
+        description="Include local meat and seafood specialties"
+    )
     safety_check: bool = Field(
         default=True,
         description="Perform safety check for travel destination"
@@ -242,13 +254,31 @@ class TripRequest(BaseModel):
         if self.consider_senior_friendly:
             accessibility_needs.extend([
                 "senior-friendly accommodations with elevator access",
-                "wheelchair accessible attractions and venues",
+                "accessible attractions and venues",
                 "comfortable seating and rest areas",
                 "easy-to-navigate locations with minimal walking"
             ])
         
+        if self.wheelchair_accessible:
+            accessibility_needs.extend([
+                "wheelchair-accessible accommodations with ramps and elevators",
+                "barrier-free attractions and venues",
+                "accessible transportation options",
+                "wide doorways and accessible bathrooms"
+            ])
+        
+        # 5b. Food preferences
+        food_preferences = []
+        if self.vegetarian_preference:
+            food_preferences.append("include vegetarian and vegan dining options")
+        if self.non_vegetarian_preference:
+            food_preferences.append("include local meat and seafood specialties")
+        
         if accessibility_needs:
             query_parts.append(f"Special requirements include: {', '.join(accessibility_needs)}")
+        
+        if food_preferences:
+            query_parts.append(f"Dining preferences: {', '.join(food_preferences)}")
 
         # 6. Comprehensive flight preferences with reasoning
         flight_requirements = []

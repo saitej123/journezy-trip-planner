@@ -18,6 +18,59 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/style.css">
     
+    <!-- Custom styles for date inputs -->
+    <style>
+        /* Make date input show calendar icon prominently */
+        input[type="date"] {
+            position: relative;
+            background: white;
+            cursor: pointer;
+            padding-right: 45px !important;
+        }
+        
+        /* Make calendar icon highly visible */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 1 !important;
+            font-size: 1.5rem;
+            width: 30px;
+            height: 30px;
+            padding: 5px;
+            position: absolute;
+            right: 10px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23007bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 20px 20px;
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        /* Firefox - make icon visible */
+        input[type="date"]::-moz-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 1 !important;
+            width: 30px;
+            height: 30px;
+        }
+        
+        /* Make entire input clickable to open calendar */
+        input[type="date"]:focus::-webkit-calendar-picker-indicator,
+        input[type="date"]:hover::-webkit-calendar-picker-indicator {
+            transform: scale(1.1);
+            transition: transform 0.2s ease;
+        }
+        
+        /* Ensure date text doesn't overlap with icon */
+        input[type="date"].form-control {
+            background-color: #fff;
+            padding-left: 12px;
+        }
+    </style>
+    
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -298,34 +351,79 @@
                         </h4>
                         <div class="alert alert-success mb-3" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
                             <i class="fas fa-magic me-2"></i>
-                            <strong>Smart Defaults:</strong> Options below are automatically selected when you add children or seniors to your trip.
+                            <strong>Smart Defaults:</strong> Options below are automatically selected when you add children or seniors to your trip. You can select multiple options for multi-generational trips!
                         </div>
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="consider_toddler_friendly" name="consider_toddler_friendly">
-                                    <label class="form-check-label" for="consider_toddler_friendly">
-                                        <i class="fas fa-baby me-2"></i>Toddler-Friendly
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="consider_toddler_friendly" name="consider_toddler_friendly" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="consider_toddler_friendly" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-baby me-2 text-primary" style="font-size: 1.2rem;"></i>
+                                            <strong>Toddler-Friendly</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Include toddler-friendly activities and accommodations</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Include toddler-friendly activities and accommodations</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="consider_senior_friendly" name="consider_senior_friendly">
-                                    <label class="form-check-label" for="consider_senior_friendly">
-                                        <i class="fas fa-wheelchair me-2"></i>Senior-Friendly Options
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="consider_senior_friendly" name="consider_senior_friendly" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="consider_senior_friendly" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-user-friends me-2 text-primary" style="font-size: 1.2rem;"></i>
+                                            <strong>Senior-Friendly</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Include senior-friendly activities and accommodations</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Include senior-friendly activities and accommodations</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="safety_check" name="safety_check" checked>
-                                    <label class="form-check-label" for="safety_check">
-                                        <i class="fas fa-shield-alt me-2"></i>Safety Check
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="wheelchair_accessible" name="wheelchair_accessible" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="wheelchair_accessible" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-wheelchair me-2 text-primary" style="font-size: 1.2rem;"></i>
+                                            <strong>Wheelchair Accessible</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Prioritize wheelchair-accessible venues and transportation</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Include travel safety information</small>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="safety_check" name="safety_check" checked style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="safety_check" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-shield-alt me-2 text-primary" style="font-size: 1.2rem;"></i>
+                                            <strong>Safety Check</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Include travel safety information</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="vegetarian_preference" name="vegetarian_preference" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="vegetarian_preference" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-leaf me-2 text-success" style="font-size: 1.2rem;"></i>
+                                            <strong>Vegetarian Preference</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Include vegetarian dining options and restaurants</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="non_vegetarian_preference" name="non_vegetarian_preference" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="non_vegetarian_preference" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-drumstick-bite me-2 text-danger" style="font-size: 1.2rem;"></i>
+                                            <strong>Non-Vegetarian Preference</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Include local meat and seafood specialties</small>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -354,49 +452,64 @@
                             <strong>Flight Timing Preferences:</strong> Child-friendly (10 AM - 6 PM) and Senior-friendly (9 AM - 4 PM) times are mutually exclusive. Choose the option that best fits your travel group.
                         </div>
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="avoid_red_eye" name="avoid_red_eye">
-                                    <label class="form-check-label" for="avoid_red_eye">
-                                        <i class="fas fa-moon me-2"></i>Avoid Red-Eye Flights
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="avoid_red_eye" name="avoid_red_eye" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="avoid_red_eye" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-moon me-2 text-primary" style="font-size: 1.2rem;"></i>
+                                            <strong>Avoid Red-Eye Flights</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Avoid flights departing 10 PM - 6 AM</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Avoid flights departing 10 PM - 6 AM</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="avoid_early_morning" name="avoid_early_morning">
-                                    <label class="form-check-label" for="avoid_early_morning">
-                                        <i class="fas fa-sun me-2"></i>Avoid Early Morning
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="avoid_early_morning" name="avoid_early_morning" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="avoid_early_morning" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-sun me-2 text-warning" style="font-size: 1.2rem;"></i>
+                                            <strong>Avoid Early Morning</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Avoid flights before 8 AM</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Avoid flights before 8 AM</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="child_friendly" name="child_friendly">
-                                    <label class="form-check-label" for="child_friendly">
-                                        <i class="fas fa-child me-2"></i>Child-Friendly Times
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="child_friendly" name="child_friendly" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="child_friendly" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-child me-2 text-info" style="font-size: 1.2rem;"></i>
+                                            <strong>Child-Friendly Times</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Prefer daytime flights (10 AM - 6 PM) ideal for families with children</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Prefer daytime flights (10 AM - 6 PM) ideal for families with children • Mutually exclusive with Senior-Friendly</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="senior_friendly" name="senior_friendly">
-                                    <label class="form-check-label" for="senior_friendly">
-                                        <i class="fas fa-user-friends me-2"></i>Senior-Friendly Times
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="senior_friendly" name="senior_friendly" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="senior_friendly" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-user-clock me-2 text-primary" style="font-size: 1.2rem;"></i>
+                                            <strong>Senior-Friendly Times</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Prefer comfortable flight times (9 AM - 4 PM) avoiding early morning and late evening</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Prefer comfortable flight times (9 AM - 4 PM) avoiding early morning and late evening • Mutually exclusive with Child-Friendly</small>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="direct_flights_only" name="direct_flights_only">
-                                    <label class="form-check-label" for="direct_flights_only">
-                                        <i class="fas fa-route me-2"></i>Direct Flights Only
+                            <div class="col-lg-6 col-md-12">
+                                <div class="form-check form-switch p-3 border rounded bg-light h-100" style="padding-left: 4rem !important;">
+                                    <input class="form-check-input" type="checkbox" id="direct_flights_only" name="direct_flights_only" style="width: 3rem; height: 1.5rem; margin-left: -3.5rem;">
+                                    <label class="form-check-label" for="direct_flights_only" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-route me-2 text-success" style="font-size: 1.2rem;"></i>
+                                            <strong>Direct Flights Only</strong>
+                                        </div>
+                                        <small class="form-text text-muted d-block" style="margin-left: 2rem;">Prefer non-stop flights</small>
                                     </label>
-                                    <small class="form-text text-muted d-block">Prefer non-stop flights</small>
                                 </div>
                             </div>
                         </div>
@@ -407,13 +520,9 @@
                         <h4 class="mb-3 text-primary">
                             <i class="fas fa-calendar-alt me-2"></i>Travel Dates
                         </h4>
-                        <div class="alert alert-info mb-3" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
-                            <i class="fas fa-shield-alt me-2"></i>
-                            <strong>Date Validation:</strong> Only future dates can be selected. End date must be after start date.
-                        </div>
                         <div class="row g-4" id="dateInputs">
                             <div class="col-md-6">
-                                <div class="date-input-container">
+                                <div class="date-input-container position-relative">
                                     <div class="form-floating">
                                         <input 
                                             type="date" 
@@ -423,21 +532,22 @@
                                             required
                                             data-aos="fade-up"
                                             data-aos-delay="200"
-                                            title="Select your departure date (minimum: today)"
+                                            title="Select your departure date"
+                                            style="cursor: pointer;"
                                         >
                                         <label for="start_date">
-                                            <i class="fas fa-plane-departure me-1"></i>Start Date
+                                            <i class="fas fa-calendar-day me-1"></i>Start Date
                                         </label>
-                                        <div class="invalid-feedback">Please select a valid start date</div>
+                                        <div class="invalid-feedback">Please select a start date</div>
                                     </div>
                                     <small class="form-text text-muted">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Departure date (minimum: today)
+                                        Select your departure date
                                     </small>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="date-input-container">
+                                <div class="date-input-container position-relative">
                                     <div class="form-floating">
                                         <input 
                                             type="date" 
@@ -447,16 +557,17 @@
                                             required
                                             data-aos="fade-up"
                                             data-aos-delay="300"
-                                            title="Select your return date (must be after start date)"
+                                            title="Select your return date"
+                                            style="cursor: pointer;"
                                         >
                                         <label for="end_date">
-                                            <i class="fas fa-plane-arrival me-1"></i>End Date
+                                            <i class="fas fa-calendar-day me-1"></i>End Date
                                         </label>
-                                        <div class="invalid-feedback">Please select a valid end date</div>
+                                        <div class="invalid-feedback">Please select an end date</div>
                                     </div>
-                                    <small class="form-text text-muted">
+                                    <small class="form-text text-muted" id="endDateHelpText">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Return date (must be after start date)
+                                        Select your return date
                                     </small>
                                 </div>
                             </div>
@@ -596,9 +707,14 @@
                 </div>
                 <div class="footer-text">
                     <p>&copy; 2025 Journezy. All Rights Reserved.</p>
+                    <div class="made-in-india-badge mt-2">
+                        <span class="badge" style="background: linear-gradient(135deg, #FF9933 0%, #FFFFFF 33%, #138808 66%); color: #000; padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 600; border: 2px solid #333;">
+                            Proudly Made in India
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
     </footer>
 </body>
-</html> 
+</html>
