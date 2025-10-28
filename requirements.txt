@@ -18,3 +18,4 @@ pydantic[email]
 gh-md-to-html[pdf_export]
 xhtml2pdf
 markdown
+packaging
