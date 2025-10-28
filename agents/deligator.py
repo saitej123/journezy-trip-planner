@@ -256,7 +256,8 @@ Destination: "{destination}"
         if (not airport_from or not airport_to) and destination:
             try:
                 extractor = GroundedTourExtractor()
-                grounded = asyncio.run(asyncio.to_thread(extractor.extract, query))
+                # extractor.extract is now synchronous; don't create nested event loops
+                grounded = extractor.extract(query)
                 structured = grounded.get("structured", "")
                 if structured:
                     try:

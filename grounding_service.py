@@ -19,9 +19,9 @@ load_dotenv()
 
 class GroundedFlightsSummarizer:
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY not set")
+            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not set")
         if genai is None:
             raise RuntimeError("google-genai package not available")
         self.client = genai.Client(api_key=api_key)
@@ -68,9 +68,9 @@ class GroundedFlightFinder:
     """Fallback flight finder using Gemini Grounding when SerpAPI returns no results."""
 
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY not set")
+            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not set")
         if genai is None:
             raise RuntimeError("google-genai package not available")
         self.client = genai.Client(api_key=api_key)
@@ -237,9 +237,9 @@ class GroundedTourExtractor:
     """Extract structured TourInfo using Gemini with Google Search grounding and return citations text."""
 
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY not set")
+            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not set")
         if genai is None:
             raise RuntimeError("google-genai package not available")
         self.client = genai.Client(api_key=api_key)
@@ -247,12 +247,10 @@ class GroundedTourExtractor:
         self.config = types.GenerateContentConfig(
             response_schema=TourInfo,
             tools=[self.tool],
-            # response_mime_type could be set to 'application/json' if desired
         )
 
-    async def extract(self, user_query: str) -> dict:
-        response = await asyncio.to_thread(
-            self.client.models.generate_content,
+    def extract(self, user_query: str) -> dict:
+        response = self.client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents=user_query,
             config=self.config,

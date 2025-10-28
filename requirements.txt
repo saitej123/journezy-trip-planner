@@ -12,8 +12,7 @@ xhtml2pdf
 jinja2
 aiofiles
 python-multipart
-pydantic[email]
 lxml_html_clean
-pydantic[email]
 gh-md-to-html[pdf_export]
 markdown
+requests
