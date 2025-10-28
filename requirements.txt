@@ -15,5 +15,6 @@ python-multipart
 pydantic[email]
 lxml_html_clean
 gh-md-to-html[pdf_export]
+xhtml2pdf
 markdown
 requests
