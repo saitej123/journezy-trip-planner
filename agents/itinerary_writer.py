@@ -100,84 +100,103 @@ def write_itinerary(
 
 
 def clean_itinerary_content(itinerary_text: str) -> str:
-    """Clean up itinerary content by removing broken URLs and problematic links"""
+    """Clean up itinerary content by removing Image: lines, broken URLs, and preserving embedded <img> tags"""
     import re
     
-    # Remove broken Google User Content URLs
+    # First, protect all <img> tags (they contain valid URLs)
+    img_tags = []
+    def save_img(match):
+        img_tags.append(match.group(0))
+        return f"___IMG_PLACEHOLDER_{len(img_tags)-1}___"
+    
+    # Save all img tags before cleaning
+    protected_text = re.sub(r'<img[^>]*>', save_img, itinerary_text)
+    
+    # Remove all "Image:" lines with URLs - these should NOT be in the itinerary text
+    # Various formats: "Image: url", "* Image: url", "**Image:** url"
+    protected_text = re.sub(r'^\s*\*?\*?\s*Image:\s*\*?\*?\s*https?://[^\n]+$', '', protected_text, flags=re.MULTILINE)
+    protected_text = re.sub(r'\n\s*\*?\s*Image:\s*https?://[^\s]+', '', protected_text)
+    protected_text = re.sub(r'\*\*Image:\*\*\s+https?://[^\s]+', '', protected_text)
+    
+    # Remove any standalone long URLs that might have escaped (but keep img placeholders)
+    protected_text = re.sub(r'(?<!src=")(?<!href=")https?://\S{100,}', '', protected_text)
+    
+    # Only remove truly broken URL patterns
     broken_url_patterns = [
-        r'https://lh3\.googleusercontent\.com/gps-cs-s/[^\s\)]*',
-        r'https://[^\s]*googleusercontent\.com/gps-cs-s/[^\s\)]*',
-        r'\[.*?\]\(https://lh3\.googleusercontent\.com/gps-cs-s/[^\)]*\)',
-        r'brw-[A-Za-z0-9_-]*',  # Remove broken URL fragments
+        r'brw-[A-Za-z0-9_-]{10,}',  # Broken URL fragments (at least 10 chars)
+        r'ZAxdA-eob4MR40Zy[A-Za-z0-9_-]*',  # Specific broken pattern
     ]
     
-    cleaned_text = itinerary_text
+    cleaned_text = protected_text
     for pattern in broken_url_patterns:
-        # Remove the broken URLs
         cleaned_text = re.sub(pattern, '', cleaned_text)
         print(f"🧹 [CLEAN-ITINERARY] Removed broken URLs matching pattern: {pattern}")
     
     # Remove excessive newlines created by URL removal
     cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
     
-    # Remove lines that only contain URL fragments or are suspiciously long
+    # Remove lines that are just asterisks or bullets without content
     lines = cleaned_text.split('\n')
     filtered_lines = []
-    
     for line in lines:
-        line = line.strip()
-        # Skip lines that are just URL fragments or extremely long (likely broken URLs)
-        if (len(line) > 200 and 'http' in line) or line.startswith('brw-') or 'ZAxdA-eob4MR40Zy' in line:
-            print(f"🧹 [CLEAN-ITINERARY] Removed suspicious line: {line[:100]}...")
+        stripped = line.strip()
+        # Keep img placeholders
+        if '___IMG_PLACEHOLDER_' in line:
+            filtered_lines.append(line)
+            continue
+        # Skip empty lines with just * or **
+        if stripped in ['*', '**', '* *', '* **']:
             continue
         filtered_lines.append(line)
     
     cleaned_text = '\n'.join(filtered_lines)
     
+    # Restore all protected img tags
+    for i, img_tag in enumerate(img_tags):
+        placeholder = f"___IMG_PLACEHOLDER_{i}___"
+        cleaned_text = cleaned_text.replace(placeholder, img_tag)
+    
     print(f"🧹 [CLEAN-ITINERARY] Cleaned itinerary: {len(itinerary_text)} → {len(cleaned_text)} characters")
+    print(f"🖼️  [CLEAN-ITINERARY] Preserved {len(img_tags)} image tags")
+    print(f"🧹 [CLEAN-ITINERARY] Removed Image: lines and broken URLs")
     return cleaned_text
 
 
 def process_itinerary_images(itinerary_text: str, flights_info: str, hotels_info: str, sights_info: str) -> str:
-    """Process the itinerary to embed actual images instead of just links"""
+    """Process the itinerary to embed images inline near relevant locations"""
 
     # Extract image URLs from the raw data
     image_urls = extract_image_urls_from_data(hotels_info, sights_info)
 
-    # Add images section at the end of the itinerary
-    images_section = "\n\n## 📸 Destination Images\n\n"
+    if not image_urls:
+        print("🖼️  [ITINERARY-IMAGES] No valid external images found")
+        return itinerary_text
 
-    if image_urls:
-        print(f"🖼️  [ITINERARY-IMAGES] Found {len(image_urls)} valid images to embed")
-        for i, (title, url) in enumerate(image_urls.items(), 1):
-            # Validate URL before adding
-            if url and url.startswith('http') and len(url) > 10:
-                images_section += f"### {title}\n"
-                images_section += f"![{title}]({url})\n\n"
-                print(f"🖼️  [ITINERARY-IMAGES] Added image: {title}")
-    else:
-        print("🖼️  [ITINERARY-IMAGES] No valid external images found, adding local fallback images")
-        # Add some local fallback images to make the itinerary more visually appealing
-        fallback_images = [
-            ("🏨 Accommodation", "/static/images/fallbacks/hotel.png"),
-            ("🍽️ Dining", "/static/images/fallbacks/restaurant.png"),
-            ("🏛️ Museums & Culture", "/static/images/fallbacks/museum.png"),
-            ("🌳 Parks & Nature", "/static/images/fallbacks/park.png"),
-            ("🛍️ Shopping", "/static/images/fallbacks/shopping.png"),
-            ("🎭 Entertainment", "/static/images/fallbacks/entertainment.png")
-        ]
-        
-        for title, image_path in fallback_images:
-            images_section += f"### {title}\n"
-            images_section += f"![{title}]({image_path})\n\n"
-            print(f"🖼️  [ITINERARY-IMAGES] Added fallback image: {title}")
-
-    # Insert images section before the practical tips section
-    if "## Practical Tips" in itinerary_text:
-        itinerary_text = itinerary_text.replace("## Practical Tips", images_section + "## Practical Tips")
-    else:
-        # If no practical tips section, add images at the end
-        itinerary_text += images_section
+    print(f"🖼️  [ITINERARY-IMAGES] Found {len(image_urls)} valid images to embed inline")
+    
+    # Try to embed images inline near their corresponding content
+    for title, url in image_urls.items():
+        # Validate URL before adding
+        if url and url.startswith('http') and len(url) > 10:
+            # Extract the location/hotel name from the title (remove emoji)
+            location_name = title.replace("🏨 ", "").replace("📍 ", "").strip()
+            
+            # Create a small inline image with error handling
+            image_html = f'\n\n<img src="{url}" alt="{location_name}" loading="lazy" onerror="this.style.display=\'none\';" style="max-width: 200px; max-height: 150px; width: auto; height: auto; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin: 12px 0; display: block; object-fit: cover;" />\n\n'
+            
+            # Look for mentions of this location in the itinerary
+            if location_name in itinerary_text:
+                # Add image after the first mention
+                itinerary_text = itinerary_text.replace(location_name, location_name + image_html, 1)
+                print(f"🖼️  [ITINERARY-IMAGES] Embedded inline image for: {location_name}")
+            else:
+                # Try partial match (first word of location name)
+                words = location_name.split()
+                if len(words) > 1 and len(words[0]) > 4:
+                    first_word = words[0]
+                    if first_word in itinerary_text:
+                        itinerary_text = itinerary_text.replace(first_word, first_word + image_html, 1)
+                        print(f"🖼️  [ITINERARY-IMAGES] Embedded inline image for partial match: {first_word}")
 
     return itinerary_text
 
@@ -191,14 +210,12 @@ def extract_image_urls_from_data(hotels_info: str, sights_info: str) -> dict:
         if not url or url == "N/A" or not url.startswith("http"):
             return False
         
-        # Filter out known problematic URL patterns
+        # Filter out ONLY truly broken URL patterns (be lenient with Google URLs)
         problematic_patterns = [
-            'googleusercontent.com/gps-cs-s/',  # Broken Google User Content URLs
-            'lh3.googleusercontent.com/gps-cs-s/',  # Specific broken pattern from the screenshot
-            'brw-', # Broken URL fragments
+            'brw-',  # Broken URL fragments
             'ZAxdA-eob4MR40Zy',  # Specific broken URL pattern
-            'placeholder.com',  # External placeholder services that may fail
-            'via.placeholder'  # External placeholder services that may fail
+            'placeholder.com',  # External placeholder services
+            'via.placeholder'  # External placeholder services
         ]
         
         for pattern in problematic_patterns:
@@ -207,9 +224,14 @@ def extract_image_urls_from_data(hotels_info: str, sights_info: str) -> dict:
                 return False
         
         # Check for reasonable URL length (broken URLs tend to be extremely long)
-        if len(url) > 500:
-            print(f"🚫 [EXTRACT-IMAGES] Filtering out overly long URL: {url[:100]}...")
+        if len(url) > 800:  # Increased from 500 to 800 to allow longer valid URLs
+            print(f"🚫 [EXTRACT-IMAGES] Filtering out excessively long URL: {url[:100]}...")
             return False
+        
+        # Allow Google User Content URLs (they're usually valid, frontend will handle errors)
+        if 'googleusercontent.com' in url:
+            print(f"✅ [EXTRACT-IMAGES] Allowing Google User Content URL: {url[:80]}...")
+            return True
             
         return True
 

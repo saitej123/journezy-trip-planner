@@ -2578,8 +2578,8 @@ function cleanItineraryContent(content) {
         return content;
     }
     
-    console.log('🧹 [CLEAN-ITINERARY] Starting cleanup...');
-    console.log('🧹 [CLEAN-ITINERARY] Input length:', content.length);
+    console.log('🧹 [CLEAN-ITINERARY-JS] Starting cleanup...');
+    console.log('🧹 [CLEAN-ITINERARY-JS] Input length:', content.length);
     
     // First, protect all <img> tags by temporarily replacing them with placeholders
     const imgTags = [];
@@ -2591,10 +2591,13 @@ function cleanItineraryContent(content) {
     // Save all img tags
     let cleanedContent = content.replace(/<img[^>]*>/g, saveImg);
     
-    // Remove all "Image:" lines with URLs - these should not be in the itinerary text
-    // BUT be very careful not to remove actual markdown content
-    cleanedContent = cleanedContent.replace(/^\*?\*?Image:\*?\*?\s*https?:\/\/[^\n]+$/gm, '');
-    cleanedContent = cleanedContent.replace(/\bImage:\s*https?:\/\/\S+/g, '');
+    // Remove all "Image:" lines with URLs in various formats
+    cleanedContent = cleanedContent.replace(/^\s*\*?\*?\s*Image:\s*\*?\*?\s*https?:\/\/[^\n]+$/gm, '');
+    cleanedContent = cleanedContent.replace(/\n\s*\*?\s*Image:\s*https?:\/\/[^\s]+/g, '');
+    cleanedContent = cleanedContent.replace(/\*\*Image:\*\*\s+https?:\/\/[^\s]+/g, '');
+    
+    // Remove standalone long URLs (but not those in img tags which are protected)
+    cleanedContent = cleanedContent.replace(/(?<!src=")(?<!href=")https?:\/\/\S{100,}/g, '');
     
     // Only remove very specific broken URL fragments
     cleanedContent = cleanedContent.replace(/\bbrw-[A-Za-z0-9_-]{10,}/g, '');
@@ -2603,17 +2606,30 @@ function cleanItineraryContent(content) {
     // Remove excessive newlines
     cleanedContent = cleanedContent.replace(/\n{4,}/g, '\n\n');
     
+    // Remove lines that are just asterisks without content
+    const lines = cleanedContent.split('\n');
+    const filteredLines = lines.filter(line => {
+        const stripped = line.trim();
+        // Keep img placeholders
+        if (stripped.includes('___IMG_PLACEHOLDER_')) return true;
+        // Skip empty lines with just * or **
+        if (['*', '**', '* *', '* **'].includes(stripped)) return false;
+        return true;
+    });
+    cleanedContent = filteredLines.join('\n');
+    
     // Restore all protected img tags
     for (let i = 0; i < imgTags.length; i++) {
         const placeholder = `___IMG_PLACEHOLDER_${i}___`;
         cleanedContent = cleanedContent.replace(placeholder, imgTags[i]);
     }
     
-    console.log(`🧹 [CLEAN-ITINERARY] Output length: ${cleanedContent.length} (preserved ${imgTags.length} images)`);
+    console.log(`🧹 [CLEAN-ITINERARY-JS] Output length: ${cleanedContent.length} (preserved ${imgTags.length} images)`);
+    console.log(`🧹 [CLEAN-ITINERARY-JS] Removed Image: lines and broken URLs`);
     
     // CRITICAL: Verify we didn't accidentally remove all content
     if (cleanedContent.length < 100 && content.length > 1000) {
-        console.error('❌ [CLEAN-ITINERARY] Content lost during cleaning! Returning original.');
+        console.error('❌ [CLEAN-ITINERARY-JS] Content lost during cleaning! Returning original.');
         return content;
     }
     
