@@ -5,16 +5,25 @@ from workflow import TourPlannerWorkflow
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import base64
 from grounding_service import GroundedFlightsSummarizer
+from utils.airport_db import init_database, populate_from_csv, get_airports, ensure_popular_airports, delete_unpopular_airports
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 [LIFESPAN] Initializing Journezy Trip Planner...")
+    # Initialize airport database on startup
+    init_database()
+    populate_from_csv()
+    # Always ensure popular airports are present (even if database already existed)
+    ensure_popular_airports()
+    # Delete unpopular USA airports to reduce clutter
+    print("🧹 [LIFESPAN] Cleaning unpopular airports...")
+    delete_unpopular_airports()
     print("✅ [LIFESPAN] Application ready")
     yield
 
@@ -373,6 +382,21 @@ class SafetyCheckResponse(BaseModel):
     travel_advisories: list[str]
     recommendations: list[str]
 
+class AirportResponse(BaseModel):
+    status: str
+    message: str
+    airports: List[Dict[str, Any]]
+
+class ModifyItineraryRequest(BaseModel):
+    itinerary_content: str = Field(..., description="Current itinerary content")
+    modification_feedback: str = Field(..., description="User feedback for modification (e.g., 'swap day 2 and day 1', 'for day 1 skip museum and add shopping')")
+    language: str = Field(default="en", description="Language code for the modified itinerary")
+
+class ModifyItineraryResponse(BaseModel):
+    status: str
+    message: str
+    modified_itinerary: str
+
 @app.post("/plan-trip", response_model=TripResponse)
 async def plan_trip(request: TripRequest):
     try:
@@ -532,7 +556,7 @@ async def plan_trip(request: TripRequest):
                         document_type = "markdown"
                 
                 # Check if it's a file path
-                elif os.path.exists(result):
+                elif isinstance(result, str) and os.path.exists(result):
                     if result.lower().endswith('.pdf'):
                         print(f"📄 [MAIN] Detected PDF file output at: {result}")
                         try:
@@ -541,7 +565,7 @@ async def plan_trip(request: TripRequest):
                             pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
                             document_data = pdf_base64
                             document_type = "pdf"
-                            print(f"✅ [MAIN] Successfully encoded PDF file to base64")
+                            print("✅ [MAIN] Successfully encoded PDF file to base64")
                         except Exception as file_err:
                             print(f"❌ [MAIN] Error reading PDF file: {file_err}")
                             document_data = result
@@ -554,22 +578,34 @@ async def plan_trip(request: TripRequest):
                         except Exception as cleanup_err:
                             print(f"⚠️ [MAIN] Error cleaning up PDF file: {cleanup_err}")
                 
-                # Handle .pdf in result string (reference format)
-                elif ".pdf" in result:
-                    with open(result, 'rb') as f:
-                        pdf_content = f.read()
-                    # Convert binary PDF to base64
-                    pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
-                    document_data = pdf_base64
-                    document_type = "pdf"
+                # Handle .pdf in result string (reference format) - only if file exists
+                elif ".pdf" in result and os.path.exists(result):
+                    try:
+                        with open(result, 'rb') as f:
+                            pdf_content = f.read()
+                        # Convert binary PDF to base64
+                        pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+                        document_data = pdf_base64
+                        document_type = "pdf"
+                        
+                        # Clean up temp file
+                        try:
+                            os.unlink(result)
+                            print(f"🧹 [MAIN] Cleaned up temp PDF file: {result}")
+                        except Exception as cleanup_err:
+                            print(f"⚠️ [MAIN] Error cleaning up PDF file: {cleanup_err}")
+                    except Exception as file_err:
+                        print(f"❌ [MAIN] Error reading PDF file: {file_err}")
+                        document_data = result
+                        document_type = "markdown"
                     
-                elif result.lower().endswith('.md'):
+                elif isinstance(result, str) and result.lower().endswith('.md'):
                     print(f"📝 [MAIN] Detected markdown file output at: {result}")
                     try:
                         with open(result, 'r', encoding='utf-8') as f:
                             document_data = f.read()
                         document_type = "markdown"
-                        print(f"✅ [MAIN] Successfully read markdown file")
+                        print("✅ [MAIN] Successfully read markdown file")
                     except Exception as file_err:
                         print(f"❌ [MAIN] Error reading markdown file: {file_err}")
                         document_data = result
@@ -593,7 +629,7 @@ async def plan_trip(request: TripRequest):
                     pdf_base64 = base64.b64encode(result).decode('utf-8')
                     document_data = pdf_base64
                     document_type = "pdf"
-                    print(f"✅ [MAIN] Successfully encoded binary data to base64")
+                    print("✅ [MAIN] Successfully encoded binary data to base64")
                 except Exception as encode_err:
                     print(f"❌ [MAIN] Error encoding binary data: {encode_err}")
                     document_data = str(result)
@@ -786,6 +822,95 @@ async def log_download():
     print("📥 [SERVER-LOG] PDF download initiated from client")
     print("🎯 [SERVER-LOG] Client requested PDF download")
     return {"status": "logged", "message": "Download logged"}
+
+@app.get("/airports", response_model=AirportResponse)
+async def get_airports_endpoint(search: Optional[str] = None, limit: int = 500):
+    """Get list of airports with optional search"""
+    try:
+        # Cap limit at 2000 to prevent performance issues
+        limit = min(limit, 2000)
+        airports = get_airports(search_term=search, limit=limit)
+        
+        # If no results and search term provided, ensure popular airports are present and retry
+        if search and len(airports) == 0:
+            print(f"🔍 [AIRPORTS] No results for '{search}', ensuring popular airports are present...")
+            ensure_popular_airports()
+            airports = get_airports(search_term=search, limit=limit)
+        
+        return AirportResponse(
+            status="success",
+            message=f"Found {len(airports)} airports",
+            airports=airports
+        )
+    except Exception as e:
+        print(f"❌ [AIRPORTS] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching airports: {str(e)}")
+
+@app.post("/airports/refresh-popular")
+async def refresh_popular_airports():
+    """Manually refresh popular airports in the database"""
+    try:
+        added, total, indian = ensure_popular_airports()
+        return {
+            "status": "success",
+            "message": f"Popular airports refreshed. Added: {added}, Total: {total}, Indian: {indian}",
+            "added_count": added,
+            "total_count": total,
+            "indian_count": indian
+        }
+    except Exception as e:
+        print(f"❌ [AIRPORTS-REFRESH] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error refreshing airports: {str(e)}")
+
+@app.post("/airports/clean-unpopular")
+async def clean_unpopular_airports():
+    """Delete unpopular airports, especially USA ones"""
+    try:
+        print("🧹 [AIRPORTS] Cleaning unpopular airports...")
+        deleted_count = delete_unpopular_airports()
+        return {
+            "status": "success", 
+            "message": f"Deleted {deleted_count} unpopular airports",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        print(f"❌ [AIRPORTS] Error cleaning airports: {e}")
+        raise HTTPException(status_code=500, detail=f"Error cleaning airports: {str(e)}")
+
+@app.post("/modify-itinerary", response_model=ModifyItineraryResponse)
+async def modify_itinerary(request: ModifyItineraryRequest):
+    """Modify an existing itinerary based on user feedback"""
+    try:
+        print("✏️ [MODIFY-ITINERARY] Starting itinerary modification...")
+        print(f"📝 [MODIFY-ITINERARY] Feedback: {request.modification_feedback}")
+        
+        from agents.itinerary_writer import modify_itinerary_content
+        
+        # Validate language
+        supported_langs = ["en", "hi", "es", "fr", "de", "it", "pt", "ja", "ko", "zh", "ar"]
+        language = (request.language or "en").lower().strip()
+        if language not in supported_langs:
+            language = "en"
+        
+        # Modify the itinerary
+        modified_itinerary = modify_itinerary_content(
+            itinerary_content=request.itinerary_content,
+            modification_feedback=request.modification_feedback,
+            language=language
+        )
+        
+        print("✅ [MODIFY-ITINERARY] Itinerary modified successfully")
+        
+        return ModifyItineraryResponse(
+            status="success",
+            message="Itinerary modified successfully",
+            modified_itinerary=modified_itinerary
+        )
+    except Exception as e:
+        print(f"❌ [MODIFY-ITINERARY] Error: {e}")
+        import traceback
+        print(f"❌ [MODIFY-ITINERARY] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error modifying itinerary: {str(e)}")
 
 @app.get("/health")
 async def health_check():

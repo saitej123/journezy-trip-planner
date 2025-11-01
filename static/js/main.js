@@ -687,6 +687,36 @@ function showError(message) {
     }, 5000);
 }
 
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'alert alert-success alert-dismissible fade show';
+    successDiv.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    const outputSection = document.getElementById('output');
+    if (outputSection) {
+        outputSection.insertBefore(successDiv, outputSection.firstChild);
+    } else {
+        const formCard = document.querySelector('.planning-card');
+        if (formCard) {
+            formCard.insertBefore(successDiv, formCard.firstChild);
+        }
+    }
+    
+    // Scroll to success message
+    successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (successDiv.parentNode) {
+            successDiv.remove();
+        }
+    }, 5000);
+}
+
 
 
 function activateTab(tabId) {
@@ -1301,13 +1331,39 @@ async function displayResults(data) {
         if (itineraryPane) {
             if (data?.itinerary?.itinerary?.data) {
                 console.log('📋 [DISPLAY-RESULTS] Displaying itinerary...');
-                const itineraryContent = formatItinerary(data.itinerary.itinerary.data);
-                itineraryPane.innerHTML = `<div class="itinerary-content">${itineraryContent}</div>`;
+                console.log('📋 [DISPLAY-RESULTS] Raw markdown preview:', data.itinerary.itinerary.data.substring(0, 500));
                 
-                // Show the download button header
+                // Store the markdown content for modification
+                window.currentItineraryMarkdown = data.itinerary.itinerary.data;
+                
+                const itineraryContent = formatItinerary(data.itinerary.itinerary.data);
+                console.log('📋 [DISPLAY-RESULTS] Formatted HTML preview:', itineraryContent.substring(0, 500));
+                
+                // formatItinerary already returns wrapped content, don't double-wrap
+                itineraryPane.innerHTML = itineraryContent;
+                
+                // Show the download button header and modify button
                 const itineraryHeader = document.querySelector('.itinerary-header');
                 if (itineraryHeader) {
                     itineraryHeader.style.display = 'block';
+                }
+                
+                // Show modify button container and button - make it prominent and visible
+                const modifyBtnContainer = document.getElementById('modifyBtnContainer');
+                const showModifyBtn = document.getElementById('showModifyBtn');
+                
+                if (modifyBtnContainer) {
+                    modifyBtnContainer.style.display = 'block';
+                    console.log('✅ [MODIFY-BTN] Modify button container displayed');
+                }
+                
+                if (showModifyBtn) {
+                    showModifyBtn.style.display = 'inline-block';
+                    showModifyBtn.style.visibility = 'visible';
+                    showModifyBtn.style.opacity = '1';
+                    console.log('✅ [MODIFY-BTN] Modify button displayed');
+                } else {
+                    console.warn('⚠️ [MODIFY-BTN] showModifyBtn element not found in DOM!');
                 }
                 
                 console.log('✅ [DISPLAY-RESULTS] Itinerary displayed');
@@ -1327,15 +1383,50 @@ async function displayResults(data) {
         // Display Flights
         const flightsPane = document.getElementById('flights');
         if (flightsPane) {
+            let flightsData = null;
+            
+            // Try multiple locations for flight data
             if (data?.itinerary?.flights?.data) {
+                flightsData = data.itinerary.flights.data;
+                console.log('✈️ [DISPLAY-RESULTS] Found flights in data.itinerary.flights.data');
+            } else if (data?.flights?.data) {
+                flightsData = data.flights.data;
+                console.log('✈️ [DISPLAY-RESULTS] Found flights in data.flights.data');
+            } else if (data?.flights) {
+                flightsData = data.flights;
+                console.log('✈️ [DISPLAY-RESULTS] Found flights in data.flights');
+            } else if (data?.itinerary?.flights) {
+                flightsData = data.itinerary.flights;
+                console.log('✈️ [DISPLAY-RESULTS] Found flights in data.itinerary.flights');
+            }
+            
+            if (flightsData) {
                 console.log('✈️ [DISPLAY-RESULTS] Displaying flights...');
-                console.log('✈️ [DISPLAY-RESULTS] Raw flights data:', data.itinerary.flights.data);
-                flightsPane.innerHTML = formatFlights(data.itinerary.flights.data);
+                console.log('✈️ [DISPLAY-RESULTS] Raw flights data type:', typeof flightsData);
+                console.log('✈️ [DISPLAY-RESULTS] Raw flights data preview:', 
+                    typeof flightsData === 'string' ? flightsData.substring(0, 200) : flightsData);
+                
+                // Hide empty state
+                const emptyState = document.getElementById('flights-empty-state');
+                if (emptyState) {
+                    emptyState.style.display = 'none';
+                }
+                
+                // Ensure flightsData is a string for formatFlights
+                const flightsString = typeof flightsData === 'string' ? flightsData : JSON.stringify(flightsData);
+                const formattedFlights = formatFlights(flightsString);
+                flightsPane.innerHTML = formattedFlights;
                 console.log('✅ [DISPLAY-RESULTS] Flights displayed');
             } else {
-                flightsPane.innerHTML = '<div class="empty-state">No flight information available</div>';
+                // Show empty state
+                const emptyState = document.getElementById('flights-empty-state');
+                if (emptyState) {
+                    emptyState.style.display = 'block';
+                } else {
+                    flightsPane.innerHTML = '<div class="empty-state" id="flights-empty-state"><i class="fas fa-plane-departure mb-3" style="font-size: 3rem; color: #ccc;"></i><p>No flight information available. Flight data might not have been generated.</p><small class="text-muted d-block mt-2">Flight data will appear here once your itinerary is generated.</small></div>';
+                }
                 console.log('⚠️ [DISPLAY-RESULTS] No flight data available');
-                console.log('⚠️ [DISPLAY-RESULTS] Data structure:', data);
+                console.log('⚠️ [DISPLAY-RESULTS] Full data structure:', data);
             }
         }
 
@@ -1558,6 +1649,22 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             console.log('🚀 [FORM] Form submission started');
+            
+            // Validate airport selection
+            const fromCity = document.getElementById('from_city')?.value;
+            const toCity = document.getElementById('to_city')?.value;
+            
+            if (!fromCity || fromCity.trim() === '') {
+                showError('Please select a departure airport from the "From City/Airport" dropdown.');
+                console.error('❌ [FORM] From airport validation failed');
+                return;
+            }
+            
+            if (!toCity || toCity.trim() === '') {
+                showError('Please select a destination airport from the "To City/Airport" dropdown.');
+                console.error('❌ [FORM] To airport validation failed');
+                return;
+            }
             
             const loading = document.getElementById('loading');
             const outputSection = document.getElementById('output');
@@ -1983,7 +2090,7 @@ function formatAmenities(amenities) {
     `).join('');
 }
 
-// Download and Share Functions
+// Download and Share Functions - Enhanced with beautiful PDF generation
 async function downloadPDF() {
     console.log('🖱️ [DOWNLOAD-PDF] Download PDF button clicked');
 
@@ -2013,14 +2120,14 @@ async function downloadPDF() {
         const downloadBtn = document.getElementById('downloadPdfBtn');
         if (downloadBtn) {
             const originalText = downloadBtn.innerHTML;
-            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Downloading...';
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Beautiful PDF...';
             downloadBtn.disabled = true;
             
-            // Reset after 5 seconds as backup
+            // Reset after 30 seconds as backup
             setTimeout(() => {
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.disabled = false;
-            }, 5000);
+            }, 30000);
         }
 
         if (documentType === 'pdf') {
@@ -2045,7 +2152,7 @@ async function downloadPDF() {
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `travel-itinerary-${new Date().toISOString().split('T')[0]}.pdf`;
+                link.download = `Journezy-Itinerary-${new Date().toISOString().split('T')[0]}.pdf`;
                 
                 // Trigger download
                 document.body.appendChild(link);
@@ -2054,6 +2161,7 @@ async function downloadPDF() {
                 window.URL.revokeObjectURL(url);
                 
                 console.log('✅ [DOWNLOAD-PDF] PDF downloaded successfully');
+                showSuccess('✅ PDF downloaded successfully! Check your downloads folder.');
                 
                 // Reset button state
                 if (downloadBtn) {
@@ -2064,7 +2172,10 @@ async function downloadPDF() {
                 return;
             } catch (pdfError) {
                 console.error('❌ [DOWNLOAD-PDF] Error downloading PDF:', pdfError);
-                showError('Error downloading PDF. Please try again.');
+                
+                // Fallback to client-side generation
+                console.log('🔄 [DOWNLOAD-PDF] Falling back to client-side PDF generation...');
+                await generateBeautifulPDFClientSide();
                 
                 // Reset button state
                 if (downloadBtn) {
@@ -2073,9 +2184,9 @@ async function downloadPDF() {
                 }
             }
         } else {
-            // Markdown fallback - show message
-            console.log('📝 [DOWNLOAD-PDF] Backend sent markdown, not PDF');
-            showError('PDF generation is not available. The backend is sending markdown instead.');
+            // Markdown - generate beautiful PDF on client side
+            console.log('📝 [DOWNLOAD-PDF] Backend sent markdown, generating beautiful PDF on client side...');
+            await generateBeautifulPDFClientSide();
             
             // Reset button state
             if (downloadBtn) {
@@ -2095,6 +2206,315 @@ async function downloadPDF() {
             downloadBtn.disabled = false;
         }
     }
+}
+
+// Generate beautiful PDF on client side using jsPDF
+async function generateBeautifulPDFClientSide() {
+    try {
+        console.log('🎨 [PDF-CLIENT] Starting beautiful PDF generation...');
+        
+        // Check if jsPDF is loaded
+        if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+            console.error('❌ [PDF-CLIENT] jsPDF library not loaded');
+            showError('PDF library not loaded. Please refresh the page and try again.');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+        });
+        
+        // Define colors matching the UI
+        const colors = {
+            primary: [102, 126, 234],      // #667eea
+            secondary: [118, 75, 162],     // #764ba2
+            dark: [33, 37, 41],            // #212529
+            light: [248, 249, 250],        // #f8f9fa
+            success: [25, 135, 84],        // #198754
+            muted: [108, 117, 125],        // #6c757d
+            white: [255, 255, 255]
+        };
+        
+        // Add gradient header (simulated with rectangles)
+        console.log('🎨 [PDF-CLIENT] Adding gradient header...');
+        for (let i = 0; i < 45; i++) {
+            const ratio = i / 45;
+            const r = Math.round(colors.primary[0] + (colors.secondary[0] - colors.primary[0]) * ratio);
+            const g = Math.round(colors.primary[1] + (colors.secondary[1] - colors.primary[1]) * ratio);
+            const b = Math.round(colors.primary[2] + (colors.secondary[2] - colors.primary[2]) * ratio);
+            doc.setFillColor(r, g, b);
+            doc.rect(0, i, 210, 1, 'F');
+        }
+        
+        // Add title with shadow effect
+        doc.setTextColor(...colors.white);
+        doc.setFontSize(28);
+        doc.setFont('helvetica', 'bold');
+        doc.text('✈️ Your Travel Itinerary', 105, 20, { align: 'center' });
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        const dateStr = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        doc.text(`Generated on ${dateStr}`, 105, 30, { align: 'center' });
+        doc.text('Powered by Journezy Trip Planner', 105, 37, { align: 'center' });
+        
+        // Add decorative line
+        doc.setDrawColor(...colors.secondary);
+        doc.setLineWidth(1);
+        doc.line(20, 50, 190, 50);
+        
+        let yPosition = 60;
+        const pageHeight = 270;
+        const margin = 20;
+        const maxWidth = 170;
+        
+        // Parse the markdown content properly
+        console.log('📝 [PDF-CLIENT] Parsing markdown content...');
+        const markdownContent = window.currentItineraryMarkdown || window.pdfData || '';
+        const sections = parseMarkdownForPDF(markdownContent);
+        console.log(`✅ [PDF-CLIENT] Parsed ${sections.length} sections`);
+        
+        sections.forEach((section, index) => {
+            // Check if we need a new page
+            if (yPosition > pageHeight) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            
+            // Section header (H1)
+            if (section.type === 'h1') {
+                // Add spacing before headers (except first)
+                if (yPosition > 60) {
+                    yPosition += 8;
+                }
+                
+                // Header background with gradient
+                doc.setFillColor(...colors.primary);
+                doc.roundedRect(margin - 5, yPosition - 7, maxWidth + 10, 12, 2, 2, 'F');
+                
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.setTextColor(...colors.white);
+                doc.text(section.content, margin, yPosition);
+                yPosition += 14;
+                
+            }
+            // Section header (H2)
+            else if (section.type === 'h2') {
+                if (yPosition > 60) {
+                    yPosition += 6;
+                }
+                
+                // Header background
+                doc.setFillColor(...colors.light);
+                doc.roundedRect(margin - 5, yPosition - 6, maxWidth + 10, 10, 2, 2, 'F');
+                
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.setTextColor(...colors.dark);
+                doc.text(section.content, margin, yPosition);
+                yPosition += 12;
+                
+            }
+            // Section header (H3)
+            else if (section.type === 'h3') {
+                yPosition += 4;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(...colors.primary);
+                doc.text(section.content, margin, yPosition);
+                yPosition += 8;
+                
+            }
+            // List items
+            else if (section.type === 'list') {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(...colors.dark);
+                
+                section.items.forEach(item => {
+                    if (yPosition > pageHeight) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    // Bullet point with primary color
+                    doc.setFillColor(...colors.primary);
+                    doc.circle(margin + 2, yPosition - 1.5, 0.8, 'F');
+                    
+                    const lines = doc.splitTextToSize(item, maxWidth - 10);
+                    lines.forEach((line, lineIndex) => {
+                        if (yPosition > pageHeight) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        doc.text(line, margin + 6, yPosition);
+                        yPosition += 5;
+                    });
+                });
+                yPosition += 3;
+                
+            }
+            // Regular paragraph
+            else if (section.type === 'paragraph') {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(...colors.dark);
+                
+                const lines = doc.splitTextToSize(section.content, maxWidth);
+                lines.forEach(line => {
+                    if (yPosition > pageHeight) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(line, margin, yPosition);
+                    yPosition += 5;
+                });
+                yPosition += 4;
+                
+            }
+            // Highlighted content
+            else if (section.type === 'highlight') {
+                const lines = doc.splitTextToSize(section.content, maxWidth - 8);
+                const boxHeight = lines.length * 5 + 4;
+                
+                if (yPosition + boxHeight > pageHeight) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                // Highlighted box with gradient
+                doc.setFillColor(255, 248, 220); // Light yellow
+                doc.roundedRect(margin - 2, yPosition - 3, maxWidth + 4, boxHeight, 2, 2, 'F');
+                
+                doc.setDrawColor(...colors.primary);
+                doc.setLineWidth(0.5);
+                doc.roundedRect(margin - 2, yPosition - 3, maxWidth + 4, boxHeight, 2, 2, 'S');
+                
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(...colors.dark);
+                
+                lines.forEach(line => {
+                    doc.text(line, margin + 2, yPosition);
+                    yPosition += 5;
+                });
+                yPosition += 6;
+            }
+        });
+        
+        // Add footer to all pages
+        console.log('📑 [PDF-CLIENT] Adding footers to all pages...');
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            
+            // Footer line
+            doc.setDrawColor(...colors.muted);
+            doc.setLineWidth(0.3);
+            doc.line(20, 285, 190, 285);
+            
+            doc.setFontSize(8);
+            doc.setTextColor(...colors.muted);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Page ${i} of ${pageCount}`, 20, 290);
+            doc.text('© Journezy Trip Planner - Your Perfect Journey', 105, 290, { align: 'center' });
+            doc.text(new Date().getFullYear().toString(), 190, 290, { align: 'right' });
+        }
+        
+        // Save the PDF
+        const fileName = `Journezy-Itinerary-${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        console.log('✅ [PDF-CLIENT] Beautiful PDF generated successfully');
+        showSuccess('✅ PDF downloaded successfully! Check your downloads folder.');
+        
+    } catch (error) {
+        console.error('❌ [PDF-CLIENT] Error generating PDF:', error);
+        showError('Error generating PDF. Please try again.');
+    }
+}
+
+// Helper function to parse markdown content for PDF
+function parseMarkdownForPDF(markdown) {
+    const sections = [];
+    if (!markdown || typeof markdown !== 'string') {
+        console.warn('⚠️ [PARSE-MD] Invalid markdown content');
+        return sections;
+    }
+    
+    const lines = markdown.split('\n');
+    let currentList = null;
+    
+    lines.forEach(line => {
+        const trimmed = line.trim();
+        
+        // Skip empty lines, images, and HTML tags
+        if (!trimmed || trimmed.startsWith('<img') || trimmed.startsWith('Image:') || trimmed.startsWith('<div') || trimmed.startsWith('</div>')) {
+            return;
+        }
+        
+        // Headers
+        if (trimmed.startsWith('# ')) {
+            if (currentList) {
+                sections.push(currentList);
+                currentList = null;
+            }
+            sections.push({ type: 'h1', content: trimmed.replace(/^#\s+/, '').replace(/[*_]/g, '') });
+        } else if (trimmed.startsWith('## ')) {
+            if (currentList) {
+                sections.push(currentList);
+                currentList = null;
+            }
+            sections.push({ type: 'h2', content: trimmed.replace(/^##\s+/, '').replace(/[*_]/g, '') });
+        } else if (trimmed.startsWith('### ')) {
+            if (currentList) {
+                sections.push(currentList);
+                currentList = null;
+            }
+            sections.push({ type: 'h3', content: trimmed.replace(/^###\s+/, '').replace(/[*_]/g, '') });
+        }
+        // List items
+        else if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.match(/^\d+\.\s/)) {
+            const content = trimmed.replace(/^[-*]\s+/, '').replace(/^\d+\.\s+/, '').replace(/[*_]{1,2}/g, '');
+            if (!currentList) {
+                currentList = { type: 'list', items: [] };
+            }
+            currentList.items.push(content);
+        }
+        // Highlighted content (bold or important)
+        else if (trimmed.startsWith('**') || trimmed.includes('💡') || trimmed.includes('⚠️') || trimmed.includes('✨') || trimmed.includes('🌟')) {
+            if (currentList) {
+                sections.push(currentList);
+                currentList = null;
+            }
+            sections.push({ type: 'highlight', content: trimmed.replace(/[*_]{1,2}/g, '') });
+        }
+        // Regular paragraph
+        else if (trimmed.length > 0) {
+            if (currentList) {
+                sections.push(currentList);
+                currentList = null;
+            }
+            sections.push({ type: 'paragraph', content: trimmed.replace(/[*_]{1,2}/g, '') });
+        }
+    });
+    
+    if (currentList) {
+        sections.push(currentList);
+    }
+    
+    console.log(`✅ [PARSE-MD] Parsed ${sections.length} sections from markdown`);
+    return sections;
 }
 
 // Style action buttons
@@ -2118,53 +2538,85 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+// Pre-process itinerary content to fix formatting issues - MINIMAL processing
+function preprocessItineraryContent(content) {
+    if (!content || typeof content !== 'string') {
+        return content;
+    }
+    
+    console.log('🔧 [PREPROCESS] Starting with content length:', content.length);
+    console.log('🔧 [PREPROCESS] First 500 chars:', content.substring(0, 500));
+    
+    // Only fix critical issues that break markdown:
+    
+    // 1. Fix concatenated location names (Location📍 Location -> Location)
+    content = content.replace(/([a-zA-Z\s&'-]+)(📍|🏨)\s*\1/g, '$1');
+    
+    // 2. Remove excessive emoji repetitions
+    content = content.replace(/(📍|🏨|🎭|🎨|🏛️|⛪|🗼|🌉){2,}/g, '$1');
+    
+    // 3. Fix headers: ensure proper markdown format
+    // Single # followed by space and "Day" or other headers
+    content = content.replace(/^#\s+(Day\s+\d+)/gmi, '## $1');
+    content = content.replace(/^###\s+(Day\s+\d+)/gmi, '## $1');
+    
+    // 4. Remove excessive newlines (but keep double newlines for markdown)
+    content = content.replace(/\n{4,}/g, '\n\n');
+    
+    // 5. Ensure proper spacing before headers (but not at start of string)
+    content = content.replace(/([^\n])\n(##\s)/g, '$1\n\n$2');
+    
+    console.log('✅ [PREPROCESS] After processing:', content.length, 'characters');
+    console.log('✅ [PREPROCESS] Headers found:', (content.match(/^##\s+Day/gm) || []).length);
+    
+    return content;
+}
+
 // Helper function to clean up broken URLs and problematic content from itinerary
 function cleanItineraryContent(content) {
     if (!content || typeof content !== 'string') {
         return content;
     }
     
-    console.log('🧹 [CLEAN-ITINERARY] Cleaning itinerary content...');
+    console.log('🧹 [CLEAN-ITINERARY] Starting cleanup...');
+    console.log('🧹 [CLEAN-ITINERARY] Input length:', content.length);
     
-    // Remove broken Google User Content URLs and their fragments
-    const brokenUrlPatterns = [
-        /https:\/\/lh3\.googleusercontent\.com\/gps-cs-s\/[^\s\)]*[\w-]*/g,
-        /https:\/\/[^\s]*googleusercontent\.com\/gps-cs-s\/[^\s\)]*[\w-]*/g,
-        /\[.*?\]\(https:\/\/lh3\.googleusercontent\.com\/gps-cs-s\/[^\)]*\)/g,
-        /brw-[A-Za-z0-9_-]+/g,  // Remove broken URL fragments
-        /ZAxdA-eob4MR40Zy[A-Za-z0-9_-]*/g,  // Specific broken pattern
-        /cbIEwNaixqOzeyYSDI6gVkKcPZOahU9yBBGLWDIcwR78GJwA-[A-Za-z0-9_-]*/g  // Long broken fragments
-    ];
+    // First, protect all <img> tags by temporarily replacing them with placeholders
+    const imgTags = [];
+    function saveImg(match) {
+        imgTags.push(match);
+        return `___IMG_PLACEHOLDER_${imgTags.length - 1}___`;
+    }
     
-    let cleanedContent = content;
-    brokenUrlPatterns.forEach((pattern, index) => {
-        const beforeLength = cleanedContent.length;
-        cleanedContent = cleanedContent.replace(pattern, '');
-        const afterLength = cleanedContent.length;
-        if (beforeLength !== afterLength) {
-            console.log(`🧹 [CLEAN-ITINERARY] Pattern ${index + 1} removed ${beforeLength - afterLength} characters`);
-        }
-    });
+    // Save all img tags
+    let cleanedContent = content.replace(/<img[^>]*>/g, saveImg);
     
-    // Remove lines that are suspiciously long and contain URL-like patterns
-    const lines = cleanedContent.split('\n');
-    const filteredLines = lines.filter(line => {
-        const trimmedLine = line.trim();
-        // Remove lines that are extremely long and likely contain broken URLs
-        if (trimmedLine.length > 200 && (trimmedLine.includes('http') || trimmedLine.includes('brw-'))) {
-            console.log(`🧹 [CLEAN-ITINERARY] Removed suspicious line: ${trimmedLine.substring(0, 100)}...`);
-            return false;
-        }
-        return true;
-    });
+    // Remove all "Image:" lines with URLs - these should not be in the itinerary text
+    // BUT be very careful not to remove actual markdown content
+    cleanedContent = cleanedContent.replace(/^\*?\*?Image:\*?\*?\s*https?:\/\/[^\n]+$/gm, '');
+    cleanedContent = cleanedContent.replace(/\bImage:\s*https?:\/\/\S+/g, '');
     
-    cleanedContent = filteredLines.join('\n');
+    // Only remove very specific broken URL fragments
+    cleanedContent = cleanedContent.replace(/\bbrw-[A-Za-z0-9_-]{10,}/g, '');
+    cleanedContent = cleanedContent.replace(/ZAxdA-eob4MR40Zy[A-Za-z0-9_-]*/g, '');
     
-    // Clean up excessive whitespace created by removals
-    cleanedContent = cleanedContent.replace(/\n{3,}/g, '\n\n');
-    cleanedContent = cleanedContent.replace(/\s{3,}/g, ' ');
+    // Remove excessive newlines
+    cleanedContent = cleanedContent.replace(/\n{4,}/g, '\n\n');
     
-    console.log(`🧹 [CLEAN-ITINERARY] Content cleaned: ${content.length} → ${cleanedContent.length} characters`);
+    // Restore all protected img tags
+    for (let i = 0; i < imgTags.length; i++) {
+        const placeholder = `___IMG_PLACEHOLDER_${i}___`;
+        cleanedContent = cleanedContent.replace(placeholder, imgTags[i]);
+    }
+    
+    console.log(`🧹 [CLEAN-ITINERARY] Output length: ${cleanedContent.length} (preserved ${imgTags.length} images)`);
+    
+    // CRITICAL: Verify we didn't accidentally remove all content
+    if (cleanedContent.length < 100 && content.length > 1000) {
+        console.error('❌ [CLEAN-ITINERARY] Content lost during cleaning! Returning original.');
+        return content;
+    }
+    
     return cleanedContent;
 }
 
@@ -2189,10 +2641,12 @@ function formatItinerary(itineraryData) {
             contentToFormat = JSON.stringify(contentToFormat);
         }
         
-        // Clean up broken URLs and problematic content before processing
+        // ONLY clean broken URLs - don't do heavy preprocessing
         contentToFormat = cleanItineraryContent(contentToFormat);
         
-        // Convert markdown to HTML using marked
+        console.log('📝 [FORMAT-ITINERARY] Parsing markdown...');
+        
+        // Convert markdown to HTML using marked with proper settings
         const htmlContent = marked.parse(contentToFormat, {
             breaks: true,
             gfm: true,
@@ -2203,77 +2657,89 @@ function formatItinerary(itineraryData) {
             smartypants: true
         });
         
-        // Enhance the HTML content with better styling and structure
+        console.log('✅ [FORMAT-ITINERARY] Markdown parsed successfully');
+        
+        // Simple enhancements - just style time ranges
         let enhancedContent = htmlContent;
         
-        // Add special styling for common itinerary sections
-        enhancedContent = enhancedContent.replace(/(<h2>(?:Day \d+|Daily Itinerary|Flight Details|Accommodation Strategy|Travel Information)[^<]*<\/h2>)/gi, 
-            '<div class="itinerary-section">$1');
-        enhancedContent = enhancedContent.replace(/(<h3>)/gi, '</div><div class="itinerary-subsection">$1');
+        // Style time ranges at start of list items: <li><strong>14:00 - 17:00:</strong>
+        enhancedContent = enhancedContent.replace(/<li><strong>(\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}):<\/strong>/gi, 
+            '<li><span class="time-badge">$1</span>');
         
-        // Add proper closing divs
-        if (enhancedContent.includes('itinerary-section')) {
-            enhancedContent += '</div>';
-        }
-        if (enhancedContent.includes('itinerary-subsection')) {
-            enhancedContent += '</div>';
-        }
+        // Style individual times: <strong>9:00</strong>
+        enhancedContent = enhancedContent.replace(/<strong>(\d{1,2}:\d{2}(?:\s*(?:AM|PM))?)<\/strong>/gi, 
+            '<strong class="time-highlight">$1</strong>');
         
-        // Enhance flight timing information
-        enhancedContent = enhancedContent.replace(/(\d{1,2}:\d{2}\s*(?:AM|PM))/gi, 
-            '<span class="timing-highlight">$1</span>');
-        
-        // Enhance currency information
-        enhancedContent = enhancedContent.replace(/([₹$]\d+(?:,\d{3})*(?:\.\d{2})?)/gi, 
-            '<span class="currency-highlight">$1</span>');
-        
-        // Enhance budget sections with proper styling
-        enhancedContent = enhancedContent.replace(/(### \d+\.\s*\*\*Budget.*?\*\*|## \*\*Budget.*?\*\*)/gi,
-            '<div class="budget-section">$1');
-        
-        // Convert budget tables to proper HTML tables with styling
-        enhancedContent = enhancedContent.replace(/\|([^|]+\|[^|]+\|[^|]+)\|/g, function(match, content) {
-            // Check if this is a table header row
-            if (content.includes('Category') && content.includes('Cost') && content.includes('Type')) {
-                const cells = content.split('|').filter(cell => cell.trim());
-                return '<table class="budget-table"><thead><tr>' + 
-                       cells.map(cell => `<th>${cell.trim()}</th>`).join('') + 
-                       '</tr></thead><tbody>';
-            } 
-            // Skip separator lines
-            else if (content.includes('---')) {
-                return '';
-            } 
-            // Check if this is a data row with currency
-            else if (content.includes('₹') || content.includes('$') || content.includes('TOTAL') || content.includes('PER PERSON')) {
-                const cells = content.split('|').filter(cell => cell.trim());
-                return '<tr>' + 
-                       cells.map(cell => `<td>${cell.trim()}</td>`).join('') + 
-                       '</tr>';
+        // Post-process images to add proper error handling and styling
+        const processedContent = enhancedContent.replace(/<img\s+([^>]*)src=["']([^"']+)["']([^>]*)>/gi, function(match, before, src, after) {
+            // Skip if already has error handling
+            if (before.includes('onerror') || after.includes('onerror')) {
+                return match;
             }
-            return match;
+            
+            // Check if it's an inline image (max-width: 300px) or gallery image (max-width: 250px)
+            const isInlineImage = match.includes('max-width: 300px') || match.includes('max-width:300px');
+            const isGalleryImage = match.includes('max-width: 250px') || match.includes('max-width:250px');
+            
+            // Add appropriate error handling and ensure styles are preserved
+            let imgTag = `<img ${before}src="${src}" ${after}`;
+            
+            // Add onerror handler if not present
+            if (!imgTag.includes('onerror')) {
+                imgTag = imgTag.replace('<img ', '<img onerror="this.style.display=\'none\'" ');
+            }
+            
+            // Add loading lazy if not present
+            if (!imgTag.includes('loading=')) {
+                imgTag = imgTag.replace('<img ', '<img loading="lazy" ');
+            }
+            
+            // Ensure proper styling is maintained
+            if (!imgTag.includes('style=')) {
+                if (isInlineImage) {
+                    imgTag = imgTag.replace('>', ' style="max-width: 300px; max-height: 200px; border-radius: 8px; margin: 10px auto; display: block;">');
+                } else if (isGalleryImage) {
+                    imgTag = imgTag.replace('>', ' style="width: 100%; max-width: 250px; height: 180px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">');
+                } else {
+                    imgTag = imgTag.replace('>', ' style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 15px 0;">');
+                }
+            }
+            
+            return imgTag;
         });
         
-        // Close budget tables
-        if (enhancedContent.includes('<table class="budget-table">')) {
-            enhancedContent = enhancedContent.replace(/(<tbody>[\s\S]*?)(?=\n\n|\n#|$)/g, '$1</tbody></table></div>');
+        // Final validation: Check if markdown was properly converted to HTML
+        const doubleAsteriskCount = (processedContent.match(/\*\*/g) || []).length;
+        const singleStarCount = (processedContent.match(/^\*\s/gm) || []).length;
+        const hashCount = (processedContent.match(/^##\s/gm) || []).length;
+        
+        if (doubleAsteriskCount > 0) {
+            console.warn(`⚠️ [FORMAT-ITINERARY] Found ${doubleAsteriskCount} unconverted ** (bold markers)`);
+        }
+        if (singleStarCount > 0) {
+            console.warn(`⚠️ [FORMAT-ITINERARY] Found ${singleStarCount} unconverted * (list markers)`);
+        }
+        if (hashCount > 0) {
+            console.warn(`⚠️ [FORMAT-ITINERARY] Found ${hashCount} unconverted ## (header markers)`);
         }
         
-        // Style budget highlights
-        enhancedContent = enhancedContent.replace(/(TOTAL BUDGET|OVERALL TRIP BUDGET).*?([₹$]\d+(?:,\d{3})*)/gi,
-            '$1: <span class="budget-total">$2</span>');
-        enhancedContent = enhancedContent.replace(/(PER PERSON BUDGET|PER PERSON ALLOCATION).*?([₹$]\d+(?:,\d{3})*)/gi,
-            '$1: <span class="budget-highlight">$2</span>');
-        enhancedContent = enhancedContent.replace(/Over budget by ([₹$]\d+(?:,\d{3})*)/gi,
-            'Over budget by <span class="budget-warning">$1</span>');
-        enhancedContent = enhancedContent.replace(/Within budget with ([₹$]\d+(?:,\d{3})*)/gi,
-            'Within budget with <span class="budget-success">$1</span>');
+        // Verify HTML was actually generated
+        const hasHtmlHeaders = processedContent.includes('<h2>') || processedContent.includes('<h3>');
+        const hasHtmlLists = processedContent.includes('<ul>') || processedContent.includes('<li>');
+        const hasHtmlBold = processedContent.includes('<strong>');
+        
+        if (!hasHtmlHeaders && !hasHtmlLists && !hasHtmlBold) {
+            console.error('❌ [FORMAT-ITINERARY] CRITICAL: Markdown was NOT converted to HTML!');
+            console.error('❌ [FORMAT-ITINERARY] Output preview:', processedContent.substring(0, 500));
+        } else {
+            console.log(`✅ [FORMAT-ITINERARY] HTML validated - Headers: ${hasHtmlHeaders}, Lists: ${hasHtmlLists}, Bold: ${hasHtmlBold}`);
+        }
         
         // Create a container with proper styling
         return `
             <div class="itinerary-content">
                 <div class="markdown-body">
-                    ${enhancedContent}
+                    ${processedContent}
                 </div>
             </div>
         `;
@@ -2288,10 +2754,22 @@ function formatItinerary(itineraryData) {
                 mangle: false
             });
             
+            // Process images in fallback rendering too
+            const processedFallback = htmlContent.replace(/<img\s+([^>]*)src=["']([^"']+)["']([^>]*)>/gi, function(match, before, src, after) {
+                let processedSrc = src;
+                if (src.startsWith('http://') || src.startsWith('https://')) {
+                    // Keep original URL for external images
+                }
+                return `<img ${before}src="${processedSrc}" ${after} 
+                    onerror="this.onerror=null; this.src='/static/images/fallbacks/no-image.png'; this.style.display='none'; this.parentElement.classList.add('image-error');"
+                    loading="lazy"
+                    style="max-width: 100%; height: auto; border-radius: 8px;">`;
+            });
+            
             return `
                 <div class="itinerary-content">
                     <div class="markdown-body">
-                        ${htmlContent}
+                        ${processedFallback}
                     </div>
                 </div>
             `;
@@ -2817,4 +3295,653 @@ function parseFlightsData(flightsString) {
         };
         return [fallbackFlight];
     }
+}
+
+// ======================
+// Airport Dropdown Functions
+// ======================
+
+let allAirports = [];
+let currentItineraryContent = '';
+
+// Load airports from backend
+async function loadAirports() {
+    try {
+        console.log('✈️ [AIRPORTS] Loading airports...');
+        // Load maximum airports (up to 2000 limit)
+        const response = await fetch('/airports?limit=2000');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.airports && Array.isArray(data.airports)) {
+            // Sort airports: popular/tourist destinations first, then alphabetically
+            allAirports = sortAirportsByPopularity(data.airports);
+            console.log(`✅ [AIRPORTS] Loaded ${allAirports.length} airports`);
+            
+            // Don't setup event listeners here - will be done in DOMContentLoaded
+            // Just return the airports data
+            
+            return allAirports;
+        } else {
+            console.error('❌ [AIRPORTS] Failed to load airports:', data.message || 'Unknown error');
+            return [];
+        }
+    } catch (error) {
+        console.error('❌ [AIRPORTS] Error loading airports:', error);
+        showError('Failed to load airports. Please check your connection.');
+        return [];
+    }
+}
+
+// Sort airports to prioritize popular tourist destinations
+function sortAirportsByPopularity(airports) {
+    // Popular tourist destination codes (international + Indian)
+    const popularCodes = new Set([
+        // Major international
+        'JFK', 'LAX', 'MIA', 'LAS', 'SFO', 'LHR', 'CDG', 'AMS', 'FRA', 'MAD', 'BCN', 'FCO', 'MXP', 'VCE',
+        'DXB', 'ICN', 'HKG', 'SIN', 'BKK', 'NRT', 'HND', 'PEK', 'PVG', 'KUL', 'DPS', 'MNL', 'DOH', 'AUH',
+        'SYD', 'MEL', 'AKL', 'GRU', 'GIG', 'YYZ', 'YVR', 'JNB', 'CPT', 'CAI', 'IST', 'TLV',
+        // Indian airports
+        'DEL', 'BOM', 'BLR', 'MAA', 'HYD', 'CCU', 'GOI', 'COK', 'JAI', 'UDR', 'AGR', 'VNS', 'ATQ', 'TRV'
+    ]);
+    
+    return airports.sort((a, b) => {
+        const aPopular = popularCodes.has(a.code);
+        const bPopular = popularCodes.has(b.code);
+        
+        // Popular airports first
+        if (aPopular && !bPopular) return -1;
+        if (!aPopular && bPopular) return 1;
+        
+        // Then sort by name alphabetically
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        return aName.localeCompare(bName);
+    });
+}
+
+// Filter airports based on search term with better matching
+function filterAirports(searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        // When no search term, return all airports (sorted by popularity already)
+        return allAirports;
+    }
+    
+    const term = searchTerm.toLowerCase().trim();
+    const termUpper = searchTerm.toUpperCase().trim();
+    
+    // Score airports for better ranking
+    const scored = allAirports.map(airport => {
+        const code = (airport.code || '').toUpperCase();
+        const name = (airport.name || '').toLowerCase();
+        const city = (airport.city || '').toLowerCase();
+        const country = (airport.country || '').toLowerCase();
+        
+        let score = 0;
+        let matches = false;
+        
+        // Exact code match (highest priority)
+        if (code === termUpper) {
+            score = 1000;
+            matches = true;
+        }
+        // Code starts with term
+        else if (code.startsWith(termUpper)) {
+            score = 500;
+            matches = true;
+        }
+        // Code contains term
+        else if (code.includes(termUpper)) {
+            score = 400;
+            matches = true;
+        }
+        // City exact match
+        else if (city === term) {
+            score = 300;
+            matches = true;
+        }
+        // City starts with term
+        else if (city.startsWith(term)) {
+            score = 200;
+            matches = true;
+        }
+        // City contains term
+        else if (city.includes(term)) {
+            score = 150;
+            matches = true;
+        }
+        // Name contains term
+        else if (name.includes(term)) {
+            score = 100;
+            matches = true;
+        }
+        // Country contains term
+        else if (country.includes(term)) {
+            score = 50;
+            matches = true;
+        }
+        
+        return { airport, score, matches };
+    });
+    
+    // Filter matches and sort by score
+    return scored
+        .filter(item => item.matches)
+        .sort((a, b) => b.score - a.score)
+        .map(item => item.airport);
+}
+
+// Populate airport dropdowns with filtered results
+function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDisplay = 5) {
+    const fromDropdown = document.getElementById('from_airport');
+    const toDropdown = document.getElementById('to_airport');
+    
+    if (!fromDropdown || !toDropdown) {
+        console.warn('⚠️ [AIRPORTS] Dropdown elements not found');
+        return;
+    }
+    
+    if (allAirports.length === 0) {
+        console.warn('⚠️ [AIRPORTS] No airports loaded yet');
+        return;
+    }
+    
+    // Filter airports for "from" dropdown
+    const filteredFrom = filterAirports(searchTermFrom);
+    fromDropdown.innerHTML = '<option value="">Select an airport...</option>';
+    
+    // Show fewer results - just 10 when searching, 5 when not searching
+    const maxResultsFrom = searchTermFrom ? 10 : 5;
+    const displayFrom = filteredFrom.slice(0, maxResultsFrom);
+    
+    displayFrom.forEach(airport => {
+        const optionText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+        const option = document.createElement('option');
+        option.value = airport.code;
+        option.textContent = optionText;
+        option.setAttribute('data-code', airport.code);
+        option.setAttribute('data-name', airport.name);
+        option.setAttribute('data-city', airport.city || '');
+        // Add tooltip with full airport information
+        option.title = `${airport.name}\nCode: ${airport.code}\nCity: ${airport.city || 'Unknown'}\nCountry: ${airport.country || 'Unknown'}`;
+        fromDropdown.appendChild(option);
+    });
+    
+    // Set dropdown size - expand when searching or focused
+    const fromSearchInput = document.getElementById('from_airport_search');
+    const isFromFocused = fromSearchInput && document.activeElement === fromSearchInput;
+    
+    if (searchTermFrom) {
+        fromDropdown.size = 3;
+        fromDropdown.style.display = 'block'; // Show dropdown when searching
+        if (filteredFrom.length > maxResultsFrom) {
+            const moreOption = document.createElement('option');
+            moreOption.textContent = `... and ${filteredFrom.length - maxResultsFrom} more (refine your search)`;
+            moreOption.disabled = true;
+            moreOption.style.fontStyle = 'italic';
+            fromDropdown.appendChild(moreOption);
+        }
+    } else if (isFromFocused) {
+        // Show recommendations when input is focused (even without typing)
+        fromDropdown.size = 3;
+        fromDropdown.style.display = 'block';
+    } else {
+        fromDropdown.size = 1;
+        fromDropdown.style.display = 'none'; // Hide dropdown when not searching and not focused
+    }
+    
+    // Filter airports for "to" dropdown
+    const filteredTo = filterAirports(searchTermTo);
+    toDropdown.innerHTML = '<option value="">Select an airport...</option>';
+    
+    // Show fewer results - just 10 when searching, 5 when not searching
+    const maxResultsTo = searchTermTo ? 10 : 5;
+    const displayTo = filteredTo.slice(0, maxResultsTo);
+    
+    displayTo.forEach(airport => {
+        const optionText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+        const option = document.createElement('option');
+        option.value = airport.code;
+        option.textContent = optionText;
+        option.setAttribute('data-code', airport.code);
+        option.setAttribute('data-name', airport.name);
+        option.setAttribute('data-city', airport.city || '');
+        // Add tooltip with full airport information
+        option.title = `${airport.name}\nCode: ${airport.code}\nCity: ${airport.city || 'Unknown'}\nCountry: ${airport.country || 'Unknown'}`;
+        toDropdown.appendChild(option);
+    });
+    
+    // Set dropdown size - expand when searching, hide when not
+    if (searchTermTo) {
+        toDropdown.size = 3;
+        toDropdown.style.display = 'block'; // Show dropdown when searching
+        if (filteredTo.length > maxResultsTo) {
+            const moreOption = document.createElement('option');
+            moreOption.textContent = `... and ${filteredTo.length - maxResultsTo} more (refine your search)`;
+            moreOption.disabled = true;
+            moreOption.style.fontStyle = 'italic';
+            toDropdown.appendChild(moreOption);
+        }
+    } else {
+        // When not searching, still show dropdown if it's focused or if we're showing initial recommendations
+        const toSearchInput = document.getElementById('to_airport_search');
+        const isFocused = toSearchInput && (document.activeElement === toSearchInput || toSearchInput === document.activeElement);
+        if (isFocused) {
+            toDropdown.size = 3;
+            toDropdown.style.display = 'block'; // Show recommendations when focused
+        } else {
+            toDropdown.size = 1;
+            toDropdown.style.display = 'none'; // Hide dropdown when not searching and not focused
+        }
+    }
+    
+    console.log(`✅ [AIRPORTS] Populated dropdowns - From: ${filteredFrom.length}, To: ${filteredTo.length}`);
+}
+
+// Setup event listeners (only once, using a flag to prevent duplicates)
+let airportListenersSetup = false;
+
+function setupAirportEventListeners() {
+    if (airportListenersSetup) {
+        return; // Already set up
+    }
+    
+    const fromDropdown = document.getElementById('from_airport');
+    const toDropdown = document.getElementById('to_airport');
+    const fromSearch = document.getElementById('from_airport_search');
+    const toSearch = document.getElementById('to_airport_search');
+    
+    if (!fromDropdown || !toDropdown) {
+        console.warn('⚠️ [AIRPORTS] Dropdown elements not found for event listeners');
+        return;
+    }
+    
+    // Search functionality for "from" airport
+    if (fromSearch) {
+        let fromSearchTimeout;
+        fromSearch.addEventListener('input', function() {
+            clearTimeout(fromSearchTimeout);
+            const searchTerm = this.value;
+            
+            // Debounce search for better performance
+            fromSearchTimeout = setTimeout(() => {
+                console.log(`🔍 [AIRPORTS] Searching "from" with: "${searchTerm}"`);
+                populateAirportDropdowns(searchTerm, toSearch ? toSearch.value : '');
+            }, 150);
+        });
+        
+        // Clear search on Escape
+        fromSearch.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                populateAirportDropdowns('', toSearch ? toSearch.value : '');
+            }
+        });
+    }
+    
+    // Search functionality for "to" airport
+    if (toSearch) {
+        let toSearchTimeout;
+        toSearch.addEventListener('input', function() {
+            clearTimeout(toSearchTimeout);
+            const searchTerm = this.value;
+            
+            // Debounce search for better performance
+            toSearchTimeout = setTimeout(() => {
+                console.log(`🔍 [AIRPORTS] Searching "to" with: "${searchTerm}"`);
+                populateAirportDropdowns(fromSearch ? fromSearch.value : '', searchTerm);
+            }, 150);
+        });
+        
+        // Clear search on Escape
+        toSearch.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                populateAirportDropdowns(fromSearch ? fromSearch.value : '', '');
+            }
+        });
+    }
+    
+    // Add event listeners for airport selection with smooth auto-close
+    fromDropdown.addEventListener('change', function() {
+        if (this.value) {
+            const airport = allAirports.find(a => a.code === this.value);
+            if (airport) {
+                // Update hidden input for form submission
+                const cityInput = document.getElementById('from_city');
+                if (cityInput) {
+                    cityInput.value = `${airport.city || airport.code} (${airport.code})`;
+                    console.log(`✅ [AIRPORTS] Selected ${airport.code} - ${airport.name}`);
+                }
+                // Update search input to show selected airport (this is the display box)
+                if (fromSearch) {
+                    fromSearch.value = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+                    fromSearch.blur(); // Remove focus from search
+                }
+                
+                // Smooth auto-close with transition
+                this.style.transition = 'all 0.3s ease';
+                this.size = 1;
+                this.style.display = 'none';
+                this.blur();
+                
+                // Clear the other dropdown if needed
+                populateAirportDropdowns('', toSearch ? toSearch.value : '');
+            }
+        }
+    });
+    
+    toDropdown.addEventListener('change', function() {
+        if (this.value) {
+            const airport = allAirports.find(a => a.code === this.value);
+            if (airport) {
+                // Update hidden input for form submission
+                const cityInput = document.getElementById('to_city');
+                if (cityInput) {
+                    cityInput.value = `${airport.city || airport.code} (${airport.code})`;
+                    console.log(`✅ [AIRPORTS] Selected ${airport.code} - ${airport.name}`);
+                }
+                // Update search input to show selected airport
+                if (toSearch) {
+                    toSearch.value = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+                    toSearch.blur(); // Remove focus from search
+                }
+                
+                // Smooth auto-close with transition
+                this.style.transition = 'all 0.3s ease';
+                this.size = 1;
+                this.style.display = 'none';
+                this.blur();
+                
+                // Clear the other dropdown if needed
+                populateAirportDropdowns(fromSearch ? fromSearch.value : '', '');
+            }
+        }
+    });
+    
+    // Double-click to select (alternative to change event)
+    fromDropdown.addEventListener('dblclick', function() {
+        if (this.value) {
+            this.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    toDropdown.addEventListener('dblclick', function() {
+        if (this.value) {
+            this.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    // Show/hide dropdown on search input focus or typing with smooth transitions
+    if (fromSearch) {
+        fromSearch.addEventListener('focus', function() {
+            const dropdown = document.getElementById('from_airport');
+            if (dropdown && allAirports.length > 0) {
+                // Show dropdown with smooth transition
+                dropdown.style.display = 'block';
+                dropdown.style.opacity = '0';
+                dropdown.size = 3;
+                // Trigger opacity transition
+                setTimeout(() => {
+                    dropdown.style.opacity = '1';
+                }, 10);
+                // Always populate with top recommendations when focused (even without typing)
+                populateAirportDropdowns('', toSearch ? toSearch.value : '');
+            }
+        });
+        
+        fromSearch.addEventListener('input', function() {
+            const dropdown = document.getElementById('from_airport');
+            if (dropdown) {
+                dropdown.style.display = 'block';
+                dropdown.style.opacity = '1';
+                dropdown.size = 3;
+            }
+        });
+        
+        // Hide dropdown smoothly when clicking outside
+        fromSearch.addEventListener('blur', function() {
+            setTimeout(() => {
+                const dropdown = document.getElementById('from_airport');
+                if (dropdown && dropdown.value === '') {
+                    dropdown.style.opacity = '0';
+                    setTimeout(() => {
+                        dropdown.style.display = 'none';
+                    }, 300); // Wait for opacity transition
+                }
+            }, 200);
+        });
+    }
+
+    if (toSearch) {
+        toSearch.addEventListener('focus', function() {
+            const dropdown = document.getElementById('to_airport');
+            if (dropdown && allAirports.length > 0) {
+                // Show dropdown with smooth transition
+                dropdown.style.display = 'block';
+                dropdown.style.opacity = '0';
+                dropdown.size = 3;
+                // Trigger opacity transition
+                setTimeout(() => {
+                    dropdown.style.opacity = '1';
+                }, 10);
+                // Always populate with top recommendations when focused (even without typing)
+                populateAirportDropdowns(fromSearch ? fromSearch.value : '', '');
+            }
+        });
+        
+        toSearch.addEventListener('input', function() {
+            const dropdown = document.getElementById('to_airport');
+            if (dropdown) {
+                dropdown.style.display = 'block';
+                dropdown.style.opacity = '1';
+                dropdown.size = 3;
+            }
+        });
+        
+        // Hide dropdown smoothly when clicking outside
+        toSearch.addEventListener('blur', function() {
+            setTimeout(() => {
+                const dropdown = document.getElementById('to_airport');
+                if (dropdown && dropdown.value === '') {
+                    dropdown.style.opacity = '0';
+                    setTimeout(() => {
+                        dropdown.style.display = 'none';
+                    }, 300); // Wait for opacity transition
+                }
+            }, 200);
+        });
+    }
+    
+    airportListenersSetup = true;
+    console.log('✅ [AIRPORTS] Event listeners set up with search functionality');
+}
+
+// Initialize airport dropdowns on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✈️ [AIRPORTS] Initializing airport dropdowns on page load...');
+    const fromContainer = document.getElementById('from_airport_container');
+    const toContainer = document.getElementById('to_airport_container');
+    
+    if (fromContainer && toContainer) {
+        // Setup event listeners
+        setupAirportEventListeners();
+        
+        // Load airports
+        if (allAirports.length === 0) {
+            console.log('📥 [AIRPORTS] Loading airports on page load...');
+            loadAirports().then(() => {
+                populateAirportDropdowns();
+            });
+        } else {
+            populateAirportDropdowns();
+        }
+    }
+});
+
+// ======================
+// Itinerary Modification Functions
+// ======================
+
+// Store current itinerary content when displayed
+function storeCurrentItinerary() {
+    const itineraryPane = document.getElementById('itinerary');
+    if (itineraryPane) {
+        // Extract the markdown content if available, otherwise use the HTML
+        const itineraryContentDiv = itineraryPane.querySelector('.itinerary-content');
+        if (itineraryContentDiv && window.currentItineraryMarkdown) {
+            currentItineraryContent = window.currentItineraryMarkdown;
+        } else if (window.currentItineraryContent) {
+            currentItineraryContent = window.currentItineraryContent;
+        } else if (itineraryContentDiv) {
+            // Fallback: use HTML content if markdown not available
+            currentItineraryContent = itineraryContentDiv.innerHTML;
+        }
+        console.log('📝 [MODIFY] Stored current itinerary content, length:', currentItineraryContent?.length || 0);
+    }
+}
+
+// Show modify itinerary UI
+function showModifyItinerary() {
+    const modifyCard = document.getElementById('modifyItineraryCard');
+    const modifyBtnContainer = document.getElementById('modifyBtnContainer');
+    
+    if (!modifyCard) {
+        console.error('❌ [MODIFY] modifyItineraryCard not found');
+        return;
+    }
+    
+    // Store current itinerary content
+    storeCurrentItinerary();
+    
+    if (currentItineraryContent) {
+        modifyCard.style.display = 'block';
+        modifyCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Hide the button container
+        if (modifyBtnContainer) modifyBtnContainer.style.display = 'none';
+        
+        // Clear any previous feedback
+        const feedbackInput = document.getElementById('modificationFeedback');
+        if (feedbackInput) feedbackInput.value = '';
+        
+        showSuccess('✨ Ready to modify! Use quick actions or write your own custom request.');
+    } else {
+        showError('No itinerary available to modify. Please generate an itinerary first.');
+    }
+}
+
+// Cancel modification
+function cancelModification() {
+    const modifyCard = document.getElementById('modifyItineraryCard');
+    const modifyBtnContainer = document.getElementById('modifyBtnContainer');
+    const feedbackInput = document.getElementById('modificationFeedback');
+    
+    if (modifyCard) modifyCard.style.display = 'none';
+    if (modifyBtnContainer) modifyBtnContainer.style.display = 'block';
+    if (feedbackInput) feedbackInput.value = '';
+}
+
+// Apply modification
+async function applyModification() {
+    const feedbackInput = document.getElementById('modificationFeedback');
+    const loadingDiv = document.getElementById('modificationLoading');
+    
+    if (!feedbackInput || !currentItineraryContent) {
+        alert('Please generate an itinerary first and provide modification feedback.');
+        return;
+    }
+    
+    const feedback = feedbackInput.value.trim();
+    if (!feedback) {
+        alert('Please enter your modification request.');
+        return;
+    }
+    
+    try {
+        // Show loading
+        if (loadingDiv) loadingDiv.style.display = 'block';
+        
+        console.log('✏️ [MODIFY] Applying modification...');
+        console.log('📝 [MODIFY] Feedback:', feedback);
+        
+        // Get current language
+        const language = getSelectedLanguage() || 'en';
+        
+        // Call backend API
+        const response = await fetch('/modify-itinerary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                itinerary_content: currentItineraryContent,
+                modification_feedback: feedback,
+                language: language
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.modified_itinerary) {
+            console.log('✅ [MODIFY] Itinerary modified successfully');
+            
+            // Update the displayed itinerary
+            const itineraryPane = document.getElementById('itinerary');
+            if (itineraryPane) {
+                // Store the new markdown content
+                window.currentItineraryMarkdown = data.modified_itinerary;
+                currentItineraryContent = data.modified_itinerary;
+                
+                // Format and display the modified itinerary
+                const formattedContent = formatItinerary(data.modified_itinerary);
+                itineraryPane.innerHTML = formattedContent;
+                
+                // Fix image loading after modification
+                setTimeout(() => {
+                    fixImageLoading();
+                }, 100);
+                
+                // Re-store content for future modifications
+                storeCurrentItinerary();
+            }
+            
+            // Hide modification UI
+            cancelModification();
+            
+            // Show success message
+            showSuccess('Itinerary modified successfully!');
+        } else {
+            throw new Error(data.message || 'Failed to modify itinerary');
+        }
+    } catch (error) {
+        console.error('❌ [MODIFY] Error modifying itinerary:', error);
+        showError('Failed to modify itinerary: ' + error.message);
+    } finally {
+        if (loadingDiv) loadingDiv.style.display = 'none';
+    }
+}
+
+// Initialize airports on page load (if not already initialized)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 [AIRPORTS] DOM loaded, initializing airport system...');
+        loadAirports().then(() => {
+            console.log(`✅ [AIRPORTS] Airport system ready with ${allAirports.length} airports`);
+        }).catch(err => {
+            console.error('❌ [AIRPORTS] Failed to initialize:', err);
+        });
+    });
+} else {
+    // DOM already loaded
+    console.log('🚀 [AIRPORTS] DOM already loaded, initializing airport system...');
+    loadAirports().then(() => {
+        console.log(`✅ [AIRPORTS] Airport system ready with ${allAirports.length} airports`);
+    }).catch(err => {
+        console.error('❌ [AIRPORTS] Failed to initialize:', err);
+    });
 }

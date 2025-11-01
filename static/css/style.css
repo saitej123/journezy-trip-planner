@@ -102,6 +102,65 @@ body {
     font-weight: 500;
 }
 
+/* Airport selection labels - ensure visibility */
+.form-label.fw-bold {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #333 !important;
+    font-size: 1rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+label[for="from_airport_search"],
+label[for="to_airport_search"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #333 !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.75rem !important;
+}
+
+/* Section spacing and styling */
+.traveler-section,
+.special-options {
+    margin-bottom: 2.5rem;
+}
+
+.traveler-section h4,
+.special-options h4 {
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+/* Improved form section dividers */
+[style*="border-top"] {
+    border-top-color: #e9ecef !important;
+}
+
+/* Enhanced card shadow on hover */
+.planning-card {
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.planning-card:hover {
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15) !important;
+    transform: translateY(-2px);
+}
+
+/* Better input group styling */
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: var(--border-color);
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: var(--primary-color);
+    background-color: #e7f3ff;
+}
+
 /* Form text */
 .form-text {
     color: var(--secondary-color);
@@ -2314,12 +2373,37 @@ body {
     box-shadow: 0 8px 24px rgba(30, 58, 138, 0.12);
     color: #1F2937;
     border: 2px solid rgba(30, 58, 138, 0.1);
+    font-size: 16px;
+    line-height: 1.8;
 }
 
 /* Markdown content styling */
 .itinerary-content .markdown-body {
-    line-height: 1.6;
+    line-height: 1.8;
     color: #1F2937;
+    font-size: 16px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Better spacing for list items */
+.itinerary-content .markdown-body ul,
+.itinerary-content .markdown-body ol {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+    list-style-position: outside;
+}
+
+.itinerary-content .markdown-body li {
+    margin: 1rem 0;
+    line-height: 1.8;
+    padding-left: 0.5rem;
+}
+
+/* Emoji spacing fix */
+.itinerary-content .markdown-body li::marker {
+    color: #667eea;
+    font-weight: bold;
 }
 
 .itinerary-content .markdown-body img {
@@ -2327,10 +2411,8 @@ body {
     height: auto;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(30, 58, 138, 0.15);
-    margin: 1rem 0;
+    margin: 2rem auto;
     display: block;
-    margin-left: auto;
-    margin-right: auto;
 }
 
 .itinerary-content .markdown-body h1,
@@ -2340,30 +2422,63 @@ body {
 .itinerary-content .markdown-body h5,
 .itinerary-content .markdown-body h6 {
     color: #1E3A8A;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
     font-weight: 700;
+    line-height: 1.4;
+    clear: both;
+}
+
+.itinerary-content .markdown-body h1 {
+    font-size: 2rem;
+    border-bottom: 3px solid rgba(30, 58, 138, 0.3);
+    padding-bottom: 0.75rem;
 }
 
 .itinerary-content .markdown-body h2 {
+    font-size: 1.75rem;
     border-bottom: 2px solid rgba(30, 58, 138, 0.2);
     padding-bottom: 0.5rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 3rem;
 }
 
-.itinerary-content .markdown-body ul,
-.itinerary-content .markdown-body ol {
-    margin: 1rem 0;
-    padding-left: 2rem;
-}
-
-.itinerary-content .markdown-body li {
-    margin: 0.5rem 0;
-    line-height: 1.6;
+.itinerary-content .markdown-body h3 {
+    font-size: 1.25rem;
+    color: #667eea;
+    margin-top: 2rem;
 }
 
 .itinerary-content .markdown-body strong {
     color: #1E3A8A;
     font-weight: 700;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* Override strong styling inside time badges */
+.itinerary-content .time-badge strong,
+.itinerary-content .timing-highlight strong {
+    background: none !important;
+    color: inherit !important;
+    padding: 0 !important;
+}
+
+/* Paragraph spacing */
+.itinerary-content .markdown-body p {
+    margin: 1.25rem 0;
+    line-height: 1.8;
+}
+
+/* Time stamps styling */
+.itinerary-content .markdown-body p strong:first-child,
+.itinerary-content .markdown-body li strong:first-child {
+    color: #667eea;
+    font-weight: 700;
+    font-size: 0.95rem;
 }
 
 .itinerary-content .markdown-body blockquote {
@@ -2902,6 +3017,68 @@ body {
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     border: 1px solid rgba(30, 58, 138, 0.1);
+}
+
+/* Enhanced image error handling for markdown content */
+.markdown-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: opacity 0.3s ease;
+    margin: 1rem 0;
+}
+
+.markdown-body img[src=""],
+.markdown-body img:not([src]),
+.markdown-body img[src*="fallbacks/no-image"] {
+    display: none !important;
+}
+
+.markdown-body .image-error {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    color: #94a3b8;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 1rem 0;
+}
+
+.markdown-body .image-error::before {
+    content: '🖼️';
+    font-size: 3rem;
+    opacity: 0.5;
+    margin-bottom: 0.5rem;
+}
+
+.markdown-body .image-error::after {
+    content: 'Image Not Available';
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-top: 0.5rem;
+}
+
+/* Flight tab styling improvements */
+#flights .empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+#flights .flight-card {
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+#flights .empty-state.hidden {
+    display: none;
 }
 
 .itinerary-item-content {
@@ -4232,3 +4409,4 @@ body {
         gap: 8px;
     }
 }
+
