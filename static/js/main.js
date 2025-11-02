@@ -1328,7 +1328,9 @@ async function displayResults(data) {
 
         // Display Itinerary first (since it's now the first tab)
         const itineraryPane = document.getElementById('itinerary');
-        if (itineraryPane) {
+        const itineraryContentDiv = document.getElementById('itineraryContent');
+        
+        if (itineraryPane && itineraryContentDiv) {
             if (data?.itinerary?.itinerary?.data) {
                 console.log('📋 [DISPLAY-RESULTS] Displaying itinerary...');
                 console.log('📋 [DISPLAY-RESULTS] Raw markdown preview:', data.itinerary.itinerary.data.substring(0, 500));
@@ -1339,8 +1341,8 @@ async function displayResults(data) {
                 const itineraryContent = formatItinerary(data.itinerary.itinerary.data);
                 console.log('📋 [DISPLAY-RESULTS] Formatted HTML preview:', itineraryContent.substring(0, 500));
                 
-                // formatItinerary already returns wrapped content, don't double-wrap
-                itineraryPane.innerHTML = itineraryContent;
+                // Insert into dedicated content div (not replacing the entire pane)
+                itineraryContentDiv.innerHTML = itineraryContent;
                 
                 // Show the download button header and modify button
                 const itineraryHeader = document.querySelector('.itinerary-header');
@@ -1351,6 +1353,7 @@ async function displayResults(data) {
                 // Show modify button container and button - make it prominent and visible
                 const modifyBtnContainer = document.getElementById('modifyBtnContainer');
                 const showModifyBtn = document.getElementById('showModifyBtn');
+                const downloadBtnContainer = document.getElementById('downloadBtnContainer');
                 
                 if (modifyBtnContainer) {
                     modifyBtnContainer.style.display = 'block';
@@ -1366,14 +1369,30 @@ async function displayResults(data) {
                     console.warn('⚠️ [MODIFY-BTN] showModifyBtn element not found in DOM!');
                 }
                 
+                // Show download PDF button
+                if (downloadBtnContainer) {
+                    downloadBtnContainer.style.display = 'block';
+                    console.log('✅ [DOWNLOAD-BTN] Download button container displayed');
+                }
+                
                 console.log('✅ [DISPLAY-RESULTS] Itinerary displayed');
             } else {
-                itineraryPane.innerHTML = '<div class="empty-state">No itinerary available</div>';
+                itineraryContentDiv.innerHTML = '<div class="empty-state">No itinerary available</div>';
                 
-                // Hide the download button header
+                // Hide the download button header and modify button
                 const itineraryHeader = document.querySelector('.itinerary-header');
                 if (itineraryHeader) {
                     itineraryHeader.style.display = 'none';
+                }
+                
+                const modifyBtnContainer = document.getElementById('modifyBtnContainer');
+                if (modifyBtnContainer) {
+                    modifyBtnContainer.style.display = 'none';
+                }
+                
+                const downloadBtnContainer = document.getElementById('downloadBtnContainer');
+                if (downloadBtnContainer) {
+                    downloadBtnContainer.style.display = 'none';
                 }
                 
                 console.log('⚠️ [DISPLAY-RESULTS] No itinerary data available');
@@ -3380,7 +3399,51 @@ function sortAirportsByPopularity(airports) {
     });
 }
 
-// Filter airports based on search term with better matching
+// Calculate fuzzy similarity between two strings (for typo tolerance)
+function calculateSimilarity(str1, str2) {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+    
+    // Check if one is substring of other
+    if (s1.includes(s2) || s2.includes(s1)) {
+        return 0.9;
+    }
+    
+    // Calculate character overlap
+    const chars1 = new Set(s1);
+    const chars2 = new Set(s2);
+    const commonChars = new Set([...chars1].filter(c => chars2.has(c)));
+    const totalChars = new Set([...chars1, ...chars2]);
+    let similarity = commonChars.size / totalChars.size;
+    
+    // Bonus for matching prefix (first 3 characters)
+    if (s1.length >= 3 && s2.length >= 3 && s1.substring(0, 3) === s2.substring(0, 3)) {
+        similarity += 0.2;
+    }
+    
+    return similarity;
+}
+
+// Apply common typo corrections
+function getTypoVariants(term) {
+    const variants = [term];
+    const corrections = {
+        'i': 'y',
+        'y': 'i',
+        'ei': 'ee',
+        'ee': 'ei'
+    };
+    
+    for (const [old, replacement] of Object.entries(corrections)) {
+        if (term.includes(old)) {
+            variants.push(term.replace(old, replacement));
+        }
+    }
+    
+    return variants;
+}
+
+// Filter airports based on search term with fuzzy matching (typo tolerance)
 function filterAirports(searchTerm) {
     if (!searchTerm || searchTerm.trim() === '') {
         // When no search term, return all airports (sorted by popularity already)
@@ -3389,6 +3452,9 @@ function filterAirports(searchTerm) {
     
     const term = searchTerm.toLowerCase().trim();
     const termUpper = searchTerm.toUpperCase().trim();
+    
+    // Get typo variants for fuzzy matching
+    const typoVariants = getTypoVariants(term);
     
     // Score airports for better ranking
     const scored = allAirports.map(airport => {
@@ -3440,19 +3506,91 @@ function filterAirports(searchTerm) {
             score = 50;
             matches = true;
         }
+        // Fuzzy matching for typos (new!)
+        else if (term.length >= 3) {
+            // Check city against typo variants
+            for (const variant of typoVariants) {
+                if (city === variant || city.includes(variant)) {
+                    score = 180;  // Between "starts with" and "contains"
+                    matches = true;
+                    break;
+                }
+            }
+            
+            // If still no match, try fuzzy similarity
+            if (!matches) {
+                const lenDiff = Math.abs(term.length - city.length);
+                // Only check if lengths are close (within 2 characters)
+                if (lenDiff <= 2) {
+                    const similarity = calculateSimilarity(term, city);
+                    if (similarity >= 0.75) {  // 75% similarity threshold
+                        score = Math.floor(120 + (similarity * 50));  // 120-170 range
+                        matches = true;
+                    }
+                }
+            }
+            
+            // Also check name for fuzzy matching
+            if (!matches && name.length > 0) {
+                // Extract just the city part from name if it contains parentheses
+                const nameCity = name.match(/\(([^)]+)\)/);
+                const checkName = nameCity ? nameCity[1] : name;
+                
+                const lenDiff = Math.abs(term.length - checkName.length);
+                if (lenDiff <= 2) {
+                    const similarity = calculateSimilarity(term, checkName);
+                    if (similarity >= 0.75) {
+                        score = Math.floor(90 + (similarity * 30));
+                        matches = true;
+                    }
+                }
+            }
+        }
         
         return { airport, score, matches };
     });
     
     // Filter matches and sort by score
-    return scored
+    const results = scored
         .filter(item => item.matches)
         .sort((a, b) => b.score - a.score)
         .map(item => item.airport);
+    
+    // Log fuzzy matches for debugging
+    if (results.length > 0 && term.length >= 3) {
+        const topMatch = results[0];
+        const topCity = (topMatch.city || '').toLowerCase();
+        if (topCity !== term && !topCity.startsWith(term)) {
+            console.log(`🔍 [FUZZY-MATCH] "${searchTerm}" → ${topMatch.code} (${topMatch.city})`);
+        }
+    }
+    
+    return results;
+}
+
+// Search backend API if client-side search fails (fallback to Gemini grounding)
+async function searchAirportBackend(searchTerm) {
+    if (!searchTerm || searchTerm.length < 3) {
+        return [];
+    }
+    
+    try {
+        const response = await fetch(`/airports?search=${encodeURIComponent(searchTerm)}&limit=5`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.status === 'success' && data.airports && data.airports.length > 0) {
+            return data.airports;
+        }
+    } catch (error) {
+        console.warn(`⚠️ [AIRPORT-API] Backend search failed: ${error.message}`);
+    }
+    return [];
 }
 
 // Populate airport dropdowns with filtered results
-function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDisplay = 5) {
+async function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDisplay = 5) {
     const fromDropdown = document.getElementById('from_airport');
     const toDropdown = document.getElementById('to_airport');
     
@@ -3466,19 +3604,46 @@ function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDis
         return;
     }
     
-    // Filter airports for "from" dropdown
-    const filteredFrom = filterAirports(searchTermFrom);
+    // Filter airports for "from" dropdown (client-side first)
+    let filteredFrom = filterAirports(searchTermFrom);
+    
+    // If client-side search finds nothing and search term is long enough, try backend
+    if (filteredFrom.length === 0 && searchTermFrom && searchTermFrom.trim().length >= 3) {
+        const backendResults = await searchAirportBackend(searchTermFrom);
+        if (backendResults.length > 0) {
+            filteredFrom = backendResults;
+            console.log(`✅ [AIRPORTS] Backend found ${filteredFrom.length} result(s) for "${searchTermFrom}"`);
+        }
+    }
+    
     fromDropdown.innerHTML = '<option value="">Select an airport...</option>';
     
     // Show fewer results - just 10 when searching, 5 when not searching
     const maxResultsFrom = searchTermFrom ? 10 : 5;
     const displayFrom = filteredFrom.slice(0, maxResultsFrom);
     
-    displayFrom.forEach(airport => {
-        const optionText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+    displayFrom.forEach((airport) => {
+        // Check if this is a fuzzy match or "nearest to" result
+        let displayText;
+        if (airport.name && airport.name.includes('(nearest to')) {
+            // Extract the "nearest to X" part for better display
+            const match = airport.name.match(/\(nearest to ([^)]+)\)/);
+            const searchedCity = match ? match[1] : null;
+            const baseName = airport.name.replace(/\s*\(nearest to [^)]+\)/, '');
+            
+            if (searchedCity && searchTermFrom && searchedCity.toLowerCase() === searchTermFrom.toLowerCase()) {
+                // Show the searched city prominently
+                displayText = `${airport.code} - ${searchedCity} → ${airport.city} (${baseName})`;
+            } else {
+                displayText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+            }
+        } else {
+            displayText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+        }
+        
         const option = document.createElement('option');
         option.value = airport.code;
-        option.textContent = optionText;
+        option.textContent = displayText;
         option.setAttribute('data-code', airport.code);
         option.setAttribute('data-name', airport.name);
         option.setAttribute('data-city', airport.city || '');
@@ -3491,9 +3656,11 @@ function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDis
     const fromSearchInput = document.getElementById('from_airport_search');
     const isFromFocused = fromSearchInput && document.activeElement === fromSearchInput;
     
-    if (searchTermFrom) {
-        fromDropdown.size = 3;
-        fromDropdown.style.display = 'block'; // Show dropdown when searching
+    if (searchTermFrom && displayFrom.length > 0) {
+        fromDropdown.size = Math.min(displayFrom.length + 1, 5); // +1 for "Select an airport" option
+        fromDropdown.style.display = 'block';
+        fromDropdown.style.opacity = '1';
+        
         if (filteredFrom.length > maxResultsFrom) {
             const moreOption = document.createElement('option');
             moreOption.textContent = `... and ${filteredFrom.length - maxResultsFrom} more (refine your search)`;
@@ -3501,17 +3668,42 @@ function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDis
             moreOption.style.fontStyle = 'italic';
             fromDropdown.appendChild(moreOption);
         }
+    } else if (searchTermFrom && displayFrom.length === 0) {
+        fromDropdown.size = 2;
+        fromDropdown.style.display = 'block';
+        fromDropdown.style.opacity = '1';
+        
+        // Show "no results" message
+        const noResultsOption = document.createElement('option');
+        noResultsOption.textContent = `No airports found for "${searchTermFrom}"`;
+        noResultsOption.disabled = true;
+        noResultsOption.style.fontStyle = 'italic';
+        noResultsOption.style.color = '#6c757d';
+        fromDropdown.appendChild(noResultsOption);
     } else if (isFromFocused) {
         // Show recommendations when input is focused (even without typing)
         fromDropdown.size = 3;
         fromDropdown.style.display = 'block';
+        fromDropdown.style.opacity = '1';
     } else {
         fromDropdown.size = 1;
-        fromDropdown.style.display = 'none'; // Hide dropdown when not searching and not focused
+        fromDropdown.style.display = 'none';
+        fromDropdown.style.opacity = '0';
     }
     
-    // Filter airports for "to" dropdown
-    const filteredTo = filterAirports(searchTermTo);
+    // Filter airports for "to" dropdown (client-side first)
+    let filteredTo = filterAirports(searchTermTo);
+    
+    // If client-side search finds nothing and search term is long enough, try backend
+    if (filteredTo.length === 0 && searchTermTo && searchTermTo.trim().length >= 3) {
+        console.log(`🔍 [AIRPORTS] No client-side results for "${searchTermTo}", trying backend...`);
+        const backendResults = await searchAirportBackend(searchTermTo);
+        if (backendResults.length > 0) {
+            filteredTo = backendResults;
+            console.log(`✅ [AIRPORTS] Backend returned ${backendResults.length} results`);
+        }
+    }
+    
     toDropdown.innerHTML = '<option value="">Select an airport...</option>';
     
     // Show fewer results - just 10 when searching, 5 when not searching
@@ -3519,10 +3711,27 @@ function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDis
     const displayTo = filteredTo.slice(0, maxResultsTo);
     
     displayTo.forEach(airport => {
-        const optionText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+        // Check if this is a fuzzy match or "nearest to" result
+        let displayText;
+        if (airport.name && airport.name.includes('(nearest to')) {
+            // Extract the "nearest to X" part for better display
+            const match = airport.name.match(/\(nearest to ([^)]+)\)/);
+            const searchedCity = match ? match[1] : null;
+            const baseName = airport.name.replace(/\s*\(nearest to [^)]+\)/, '');
+            
+            if (searchedCity && searchTermTo && searchedCity.toLowerCase() === searchTermTo.toLowerCase()) {
+                // Show the searched city prominently
+                displayText = `${airport.code} - ${searchedCity} → ${airport.city} (${baseName})`;
+            } else {
+                displayText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+            }
+        } else {
+            displayText = `${airport.code} - ${airport.name} (${airport.city || 'Unknown'})`;
+        }
+        
         const option = document.createElement('option');
         option.value = airport.code;
-        option.textContent = optionText;
+        option.textContent = displayText;
         option.setAttribute('data-code', airport.code);
         option.setAttribute('data-name', airport.name);
         option.setAttribute('data-city', airport.city || '');
@@ -3532,9 +3741,11 @@ function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDis
     });
     
     // Set dropdown size - expand when searching, hide when not
-    if (searchTermTo) {
-        toDropdown.size = 3;
-        toDropdown.style.display = 'block'; // Show dropdown when searching
+    if (searchTermTo && displayTo.length > 0) {
+        console.log(`📋 [DROPDOWN] Showing ${displayTo.length} results for "${searchTermTo}"`);
+        toDropdown.size = Math.min(displayTo.length + 1, 5); // +1 for "Select an airport" option
+        toDropdown.style.display = 'block';
+        toDropdown.style.opacity = '1';
         if (filteredTo.length > maxResultsTo) {
             const moreOption = document.createElement('option');
             moreOption.textContent = `... and ${filteredTo.length - maxResultsTo} more (refine your search)`;
@@ -3542,6 +3753,19 @@ function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDis
             moreOption.style.fontStyle = 'italic';
             toDropdown.appendChild(moreOption);
         }
+    } else if (searchTermTo && displayTo.length === 0) {
+        console.log(`⚠️ [DROPDOWN] No results found for "${searchTermTo}"`);
+        toDropdown.size = 2;
+        toDropdown.style.display = 'block';
+        toDropdown.style.opacity = '1';
+        
+        // Show "no results" message
+        const noResultsOption = document.createElement('option');
+        noResultsOption.textContent = `No airports found for "${searchTermTo}"`;
+        noResultsOption.disabled = true;
+        noResultsOption.style.fontStyle = 'italic';
+        noResultsOption.style.color = '#6c757d';
+        toDropdown.appendChild(noResultsOption);
     } else {
         // When not searching, still show dropdown if it's focused or if we're showing initial recommendations
         const toSearchInput = document.getElementById('to_airport_search');
@@ -3551,7 +3775,8 @@ function populateAirportDropdowns(searchTermFrom = '', searchTermTo = '', maxDis
             toDropdown.style.display = 'block'; // Show recommendations when focused
         } else {
             toDropdown.size = 1;
-            toDropdown.style.display = 'none'; // Hide dropdown when not searching and not focused
+            toDropdown.style.display = 'none';
+            toDropdown.style.opacity = '0';
         }
     }
     
@@ -3584,9 +3809,8 @@ function setupAirportEventListeners() {
             const searchTerm = this.value;
             
             // Debounce search for better performance
-            fromSearchTimeout = setTimeout(() => {
-                console.log(`🔍 [AIRPORTS] Searching "from" with: "${searchTerm}"`);
-                populateAirportDropdowns(searchTerm, toSearch ? toSearch.value : '');
+            fromSearchTimeout = setTimeout(async () => {
+                await populateAirportDropdowns(searchTerm, toSearch ? toSearch.value : '');
             }, 150);
         });
         
@@ -3596,6 +3820,22 @@ function setupAirportEventListeners() {
                 this.value = '';
                 populateAirportDropdowns('', toSearch ? toSearch.value : '');
             }
+        });
+        
+        // Close dropdown on blur (when losing focus)
+        fromSearch.addEventListener('blur', function() {
+            // Delay to allow selection to happen first
+            setTimeout(() => {
+                if (fromDropdown && fromDropdown.style.display === 'block') {
+                    fromDropdown.style.transition = 'opacity 0.2s ease';
+                    fromDropdown.style.opacity = '0';
+                    setTimeout(() => {
+                        fromDropdown.style.display = 'none';
+                        fromDropdown.size = 1;
+                        fromDropdown.style.opacity = '1';
+                    }, 200);
+                }
+            }, 300); // Wait 300ms to allow click on dropdown option
         });
     }
     
@@ -3620,6 +3860,22 @@ function setupAirportEventListeners() {
                 populateAirportDropdowns(fromSearch ? fromSearch.value : '', '');
             }
         });
+        
+        // Close dropdown on blur (when losing focus)
+        toSearch.addEventListener('blur', function() {
+            // Delay to allow selection to happen first
+            setTimeout(() => {
+                if (toDropdown && toDropdown.style.display === 'block') {
+                    toDropdown.style.transition = 'opacity 0.2s ease';
+                    toDropdown.style.opacity = '0';
+                    setTimeout(() => {
+                        toDropdown.style.display = 'none';
+                        toDropdown.size = 1;
+                        toDropdown.style.opacity = '1';
+                    }, 200);
+                }
+            }, 300); // Wait 300ms to allow click on dropdown option
+        });
     }
     
     // Add event listeners for airport selection with smooth auto-close
@@ -3639,14 +3895,16 @@ function setupAirportEventListeners() {
                     fromSearch.blur(); // Remove focus from search
                 }
                 
-                // Smooth auto-close with transition
-                this.style.transition = 'all 0.3s ease';
-                this.size = 1;
-                this.style.display = 'none';
-                this.blur();
+                // Smooth close with fade out transition
+                this.style.transition = 'opacity 0.2s ease, height 0.2s ease';
+                this.style.opacity = '0';
                 
-                // Clear the other dropdown if needed
-                populateAirportDropdowns('', toSearch ? toSearch.value : '');
+                setTimeout(() => {
+                    this.style.display = 'none';
+                    this.size = 1;
+                    this.style.opacity = '1'; // Reset for next time
+                    this.blur();
+                }, 200);
             }
         }
     });
@@ -3667,14 +3925,16 @@ function setupAirportEventListeners() {
                     toSearch.blur(); // Remove focus from search
                 }
                 
-                // Smooth auto-close with transition
-                this.style.transition = 'all 0.3s ease';
-                this.size = 1;
-                this.style.display = 'none';
-                this.blur();
+                // Smooth close with fade out transition
+                this.style.transition = 'opacity 0.2s ease, height 0.2s ease';
+                this.style.opacity = '0';
                 
-                // Clear the other dropdown if needed
-                populateAirportDropdowns(fromSearch ? fromSearch.value : '', '');
+                setTimeout(() => {
+                    this.style.display = 'none';
+                    this.size = 1;
+                    this.style.opacity = '1'; // Reset for next time
+                    this.blur();
+                }, 200);
             }
         }
     });
@@ -3689,6 +3949,36 @@ function setupAirportEventListeners() {
     toDropdown.addEventListener('dblclick', function() {
         if (this.value) {
             this.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    // Click outside to close dropdown
+    document.addEventListener('click', function(event) {
+        const isFromSearch = fromSearch && fromSearch.contains(event.target);
+        const isFromDropdown = fromDropdown && fromDropdown.contains(event.target);
+        const isToSearch = toSearch && toSearch.contains(event.target);
+        const isToDropdown = toDropdown && toDropdown.contains(event.target);
+        
+        // Close FROM dropdown if clicking outside
+        if (!isFromSearch && !isFromDropdown && fromDropdown) {
+            fromDropdown.style.transition = 'opacity 0.2s ease';
+            fromDropdown.style.opacity = '0';
+            setTimeout(() => {
+                fromDropdown.style.display = 'none';
+                fromDropdown.size = 1;
+                fromDropdown.style.opacity = '1';
+            }, 200);
+        }
+        
+        // Close TO dropdown if clicking outside
+        if (!isToSearch && !isToDropdown && toDropdown) {
+            toDropdown.style.transition = 'opacity 0.2s ease';
+            toDropdown.style.opacity = '0';
+            setTimeout(() => {
+                toDropdown.style.display = 'none';
+                toDropdown.size = 1;
+                toDropdown.style.opacity = '1';
+            }, 200);
         }
     });
     
@@ -3915,7 +4205,10 @@ async function applyModification() {
                 
                 // Format and display the modified itinerary
                 const formattedContent = formatItinerary(data.modified_itinerary);
-                itineraryPane.innerHTML = formattedContent;
+                const itineraryContentDiv = document.getElementById('itineraryContent');
+                if (itineraryContentDiv) {
+                    itineraryContentDiv.innerHTML = formattedContent;
+                }
                 
                 // Fix image loading after modification
                 setTimeout(() => {

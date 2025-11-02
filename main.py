@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 import base64
 from grounding_service import GroundedFlightsSummarizer
 from utils.airport_db import init_database, populate_from_csv, get_airports, ensure_popular_airports, delete_unpopular_airports
+from utils.airport_grounding import enrich_airports_with_grounding
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -388,9 +389,18 @@ class AirportResponse(BaseModel):
     airports: List[Dict[str, Any]]
 
 class ModifyItineraryRequest(BaseModel):
-    itinerary_content: str = Field(..., description="Current itinerary content")
-    modification_feedback: str = Field(..., description="User feedback for modification (e.g., 'swap day 2 and day 1', 'for day 1 skip museum and add shopping')")
-    language: str = Field(default="en", description="Language code for the modified itinerary")
+    itinerary_content: str = Field(
+        ..., 
+        description="Previously generated itinerary content (markdown format). This is the itinerary that will be modified, not regenerated from scratch."
+    )
+    modification_feedback: str = Field(
+        ..., 
+        description="Natural language modification request. Examples: 'swap day 1 and day 2', 'for day 1 skip museum and add shopping', 'move beach visit from day 2 to day 3', 'add more food experiences'"
+    )
+    language: str = Field(
+        default="en", 
+        description="Language code for the modified itinerary (en, hi, es, fr, de, it, pt, ja, ko, zh, ar)"
+    )
 
 class ModifyItineraryResponse(BaseModel):
     status: str
@@ -825,21 +835,37 @@ async def log_download():
 
 @app.get("/airports", response_model=AirportResponse)
 async def get_airports_endpoint(search: Optional[str] = None, limit: int = 500):
-    """Get list of airports with optional search"""
+    """Get list of airports with optional search - uses grounding for unknown cities"""
     try:
         # Cap limit at 2000 to prevent performance issues
         limit = min(limit, 2000)
         airports = get_airports(search_term=search, limit=limit)
         
-        # If no results and search term provided, ensure popular airports are present and retry
+        # If no results and search term provided, try multiple fallbacks
         if search and len(airports) == 0:
-            print(f"🔍 [AIRPORTS] No results for '{search}', ensuring popular airports are present...")
+            print(f"🔍 [AIRPORTS] No results for '{search}' in database...")
+            
+            # Fallback 1: Ensure popular airports are present and retry
+            print(f"🔍 [AIRPORTS] Fallback 1: Refreshing popular airports...")
             ensure_popular_airports()
             airports = get_airports(search_term=search, limit=limit)
+            
+            # Fallback 2: Use Google Gemini grounding to find nearby airport
+            if len(airports) == 0:
+                print(f"🔍 [AIRPORTS] Fallback 2: Using Gemini grounding service...")
+                airports = enrich_airports_with_grounding(search, airports)
+                
+                if len(airports) > 0:
+                    print(f"✅ [AIRPORTS] Found {len(airports)} airports via grounding")
+        
+        message = f"Found {len(airports)} airports"
+        if airports and len(airports) > 0 and hasattr(airports[0], 'get'):
+            if '(nearest to' in str(airports[0].get('name', '')):
+                message += " (via intelligent search)"
         
         return AirportResponse(
             status="success",
-            message=f"Found {len(airports)} airports",
+            message=message,
             airports=airports
         )
     except Exception as e:
@@ -879,9 +905,29 @@ async def clean_unpopular_airports():
 
 @app.post("/modify-itinerary", response_model=ModifyItineraryResponse)
 async def modify_itinerary(request: ModifyItineraryRequest):
-    """Modify an existing itinerary based on user feedback"""
+    """
+    Modify an existing itinerary based on user feedback.
+    
+    This endpoint takes a previously generated itinerary and modifies it based on 
+    natural language feedback without regenerating from scratch.
+    
+    Args:
+        request: ModifyItineraryRequest containing:
+            - itinerary_content: The previously generated itinerary (markdown)
+            - modification_feedback: Natural language modification request
+              Examples: 
+                - "Swap day 1 and day 2 activities"
+                - "For day 1, skip museum and add shopping instead"
+                - "Move beach visit from day 2 to day 3"
+                - "Add more restaurants throughout the trip"
+            - language: Language code for the modified itinerary (default: en)
+    
+    Returns:
+        ModifyItineraryResponse with the modified itinerary
+    """
     try:
         print("✏️ [MODIFY-ITINERARY] Starting itinerary modification...")
+        print(f"📝 [MODIFY-ITINERARY] Original itinerary length: {len(request.itinerary_content)} characters")
         print(f"📝 [MODIFY-ITINERARY] Feedback: {request.modification_feedback}")
         
         from agents.itinerary_writer import modify_itinerary_content
@@ -960,7 +1006,12 @@ async def read_app():
     try:
         if not os.path.exists('templates/index.html'):
             raise HTTPException(status_code=404, detail="Application page not found")
-        return FileResponse('templates/index.html')
+        response = FileResponse('templates/index.html')
+        # Add no-cache headers to force reload
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
     except Exception as e:
         print(f"❌ [APP] Error serving application page: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

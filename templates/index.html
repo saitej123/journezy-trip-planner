@@ -85,31 +85,95 @@
         #from_airport, #to_airport {
             border-top-left-radius: 0;
             border-top-right-radius: 0;
-            max-height: 120px;
+            max-height: 200px !important;
             overflow-y: auto;
+            overflow-x: hidden;
             border-top: 1px solid #ced4da;
-            display: none !important; /* Hidden by default - only 2 boxes visible (search inputs) */
-            transition: all 0.3s ease, opacity 0.3s ease; /* Smooth transition */
+            display: none; /* Hidden by default */
             opacity: 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 2px solid #0d6efd;
+            border-top: 1px solid #ced4da;
+            
+            /* Smooth transitions for open/close */
+            transition: opacity 0.2s ease-in-out, 
+                        max-height 0.2s ease-in-out,
+                        transform 0.2s ease-in-out !important;
+            transform-origin: top;
+            will-change: opacity, max-height, transform;
         }
         
-        /* Show dropdown with smooth fade-in */
+        /* Show dropdown with smooth fade-in and slide down */
         #from_airport[style*="display: block"],
         #to_airport[style*="display: block"] {
-            opacity: 1;
+            display: block !important;
+            opacity: 1 !important;
+            animation: dropdownSlideIn 0.2s ease-out;
+        }
+        
+        /* Smooth slide-in animation */
+        @keyframes dropdownSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scaleY(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scaleY(1);
+            }
+        }
+        
+        /* Smooth fade-out when closing */
+        #from_airport[style*="opacity: 0"],
+        #to_airport[style*="opacity: 0"] {
+            animation: dropdownSlideOut 0.2s ease-in;
+        }
+        
+        @keyframes dropdownSlideOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scaleY(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scaleY(0.95);
+            }
         }
         
         /* Enhance dropdown options with hover effect and better tooltips */
-        #from_airport option:hover,
-        #to_airport option:hover {
-            background-color: #e7f3ff;
-            cursor: pointer;
-        }
-        
         #from_airport option,
         #to_airport option {
-            padding: 8px 12px;
+            padding: 10px 14px !important;
             cursor: pointer;
+            font-size: 0.95rem !important;
+            line-height: 1.6 !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+            transition: all 0.15s ease !important;
+            background-color: white;
+        }
+        
+        #from_airport option:hover,
+        #to_airport option:hover {
+            background-color: #e7f3ff !important;
+            transform: translateX(2px);
+            box-shadow: inset 3px 0 0 #0d6efd;
+        }
+        
+        #from_airport option:checked, 
+        #from_airport option:focus,
+        #to_airport option:checked, 
+        #to_airport option:focus {
+            background-color: #0d6efd !important;
+            color: white !important;
+            font-weight: 500 !important;
+        }
+        
+        #from_airport option:disabled, 
+        #to_airport option:disabled {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            font-style: italic !important;
+            border-left: 3px solid #dee2e6 !important;
         }
         
         /* Style for inline itinerary images - Enhanced for better rendering */
@@ -173,28 +237,55 @@
         #from_airport[size]:not([size="1"]),
         #to_airport[size]:not([size="1"]) {
             display: block !important;
+            opacity: 1 !important;
         }
         
-        #from_airport option, #to_airport option {
-            padding: 8px 12px;
-            cursor: pointer;
+        /* Style for fuzzy match results with arrow */
+        #from_airport option[value]:not([value=""]),
+        #to_airport option[value]:not([value=""]) {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         }
         
-        #from_airport option:hover, #to_airport option:hover {
-            background-color: #f0f0f0 !important;
+        /* Enhanced visual styling for search inputs */
+        #from_airport_search, #to_airport_search {
+            font-size: 1rem !important;
+            padding: 12px 15px !important;
+            border: 2px solid #ced4da !important;
+            transition: all 0.2s ease-in-out !important;
+            background-color: white;
         }
         
-        #from_airport option:checked, #to_airport option:checked,
-        #from_airport option:focus, #to_airport option:focus {
-            background-color: #0d6efd !important;
-            color: white !important;
+        #from_airport_search:focus, #to_airport_search:focus {
+            border-color: #0d6efd !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15) !important;
+            outline: none;
+            transform: translateY(-1px);
         }
         
-        #from_airport option:disabled, #to_airport option:disabled {
-            background-color: #e9ecef;
-            color: #6c757d;
-            font-style: italic;
+        #from_airport_search:hover:not(:focus), 
+        #to_airport_search:hover:not(:focus) {
+            border-color: #99c5ff !important;
         }
+        
+        /* Scrollbar styling for dropdowns */
+        #from_airport::-webkit-scrollbar, #to_airport::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #from_airport::-webkit-scrollbar-track, #to_airport::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        #from_airport::-webkit-scrollbar-thumb, #to_airport::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        #from_airport::-webkit-scrollbar-thumb:hover, #to_airport::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
         
         /* Image error handling styles - Enhanced */
         .image-error {
@@ -426,16 +517,73 @@
         
         /* Modify itinerary card improvements */
         #modifyItineraryCard {
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 24px rgba(13, 110, 253, 0.2);
+            border: 2px solid #0d6efd !important;
+            border-radius: 12px !important;
+            overflow: hidden;
+            animation: slideInFromTop 0.4s ease-out;
+        }
+        
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         #modifyItineraryCard .card-header {
             font-weight: 600;
+            background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
+            padding: 1.2rem 1.5rem !important;
         }
         
         #modificationFeedback {
             resize: vertical;
-            min-height: 80px;
+            min-height: 120px;
+            font-size: 1rem;
+            border: 2px solid #ced4da;
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        #modificationFeedback:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+            outline: none;
+        }
+        
+        #modifyBtnContainer {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        #showModifyBtn {
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+        }
+        
+        #showModifyBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
+        }
+        
+        .quick-action-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .quick-action-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
     </style>
 </head>
@@ -547,10 +695,10 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                                     <input 
-                                        type="text" 
-                                        class="form-control" 
+                                        type="text"
+                                        class="form-control"
                                         id="from_airport_search" 
-                                        placeholder="Search: code (JFK), city (New York), or country..."
+                                        placeholder="Type city name (e.g., ambala, munnar, delhi) - typos OK!"
                                         autocomplete="off"
                                     >
                                 </div>
@@ -578,10 +726,10 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                                     <input 
-                                        type="text" 
-                                        class="form-control" 
+                                        type="text"
+                                        class="form-control"
                                         id="to_airport_search" 
-                                        placeholder="Search: code (JFK), city (New York), or country..."
+                                        placeholder="Type city name (e.g., ooty, darjeeling, goa) - typos OK!"
                                         autocomplete="off"
                                     >
                                 </div>
@@ -1031,12 +1179,6 @@
             <div class="tab-content" data-aos="fade-up">
                 <div id="itinerary" class="tab-pane active">
                     <div class="itinerary-header" style="display: none; margin-bottom: 1rem;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h3 class="mb-0">Your Travel Itinerary</h3>
-                            <button id="downloadPdfBtn" class="btn btn-primary">
-                                <i class="fas fa-download me-2"></i>Download PDF
-                            </button>
-                        </div>
                         <!-- Itinerary Modification Section -->
                         <div class="card border-primary mb-3 shadow-sm" id="modifyItineraryCard" style="display: none;">
                             <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
@@ -1048,10 +1190,15 @@
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
-                            <div class="card-body">
-                                <div class="alert alert-info mb-3" style="font-size: 0.9rem;">
-                                    <i class="fas fa-magic me-2"></i>
-                                    <strong>AI-Powered Editing:</strong> Use natural language to modify your itinerary. The AI will intelligently rearrange and update your trip plan.
+                            <div class="card-body" style="padding: 1.5rem;">
+                                <div class="alert alert-info shadow-sm mb-4" style="font-size: 0.95rem; border-left: 4px solid #0dcaf0; background: linear-gradient(135deg, #d1ecf1, #e7f5f9);">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-robot me-3" style="font-size: 2rem; color: #0dcaf0;"></i>
+                                        <div>
+                                            <strong style="font-size: 1.05rem;">AI-Powered Itinerary Modification</strong>
+                                            <p class="mb-0 mt-1">Use natural language to modify your trip. The AI takes your existing itinerary and intelligently updates it based on your requests - no need to start over!</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <!-- Quick Action Buttons -->
@@ -1060,20 +1207,23 @@
                                         <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions:
                                     </label>
                                     <div class="d-flex flex-wrap gap-2 mb-3">
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('modificationFeedback').value='Swap day 1 and day 2 activities'">
+                                        <button class="btn btn-sm btn-outline-primary quick-action-btn" onclick="document.getElementById('modificationFeedback').value='Swap day 1 and day 2 activities'">
                                             <i class="fas fa-exchange-alt me-1"></i>Swap Days 1 & 2
                                         </button>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('modificationFeedback').value='Add more shopping activities'">
+                                        <button class="btn btn-sm btn-outline-primary quick-action-btn" onclick="document.getElementById('modificationFeedback').value='Add more shopping activities'">
                                             <i class="fas fa-shopping-bag me-1"></i>Add Shopping
                                         </button>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('modificationFeedback').value='Replace museum with outdoor activities'">
+                                        <button class="btn btn-sm btn-outline-primary quick-action-btn" onclick="document.getElementById('modificationFeedback').value='Replace museum with outdoor activities'">
                                             <i class="fas fa-tree me-1"></i>More Outdoors
                                         </button>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('modificationFeedback').value='Add more food experiences and restaurants'">
+                                        <button class="btn btn-sm btn-outline-primary quick-action-btn" onclick="document.getElementById('modificationFeedback').value='Add more food experiences and restaurants'">
                                             <i class="fas fa-utensils me-1"></i>More Dining
                                         </button>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('modificationFeedback').value='Make the itinerary more relaxed with longer breaks'">
+                                        <button class="btn btn-sm btn-outline-primary quick-action-btn" onclick="document.getElementById('modificationFeedback').value='Make the itinerary more relaxed with longer breaks'">
                                             <i class="fas fa-spa me-1"></i>More Relaxed
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success quick-action-btn" onclick="document.getElementById('modificationFeedback').value='Skip day 1 museum and add beach time instead'">
+                                            <i class="fas fa-umbrella-beach me-1"></i>Skip & Replace
                                         </button>
                                     </div>
                                 </div>
@@ -1086,9 +1236,8 @@
                                     <textarea 
                                         class="form-control" 
                                         id="modificationFeedback" 
-                                        rows="5" 
-                                        placeholder="Examples:&#10;• Swap day 2 and day 3&#10;• For day 1, skip museum and add shopping instead&#10;• Move Eiffel Tower visit from day 2 to day 3&#10;• Replace the park visit with a beach day&#10;• Add more restaurants and food tours throughout the trip"
-                                        style="font-size: 0.95rem;"
+                                        rows="6" 
+                                        placeholder="Type your modification request here...&#10;&#10;Examples:&#10;• Swap day 1 and day 2 activities&#10;• For day 1, skip museum and add shopping instead&#10;• Move beach visit from day 2 to day 3&#10;• Replace park with more food experiences&#10;• Add more relaxation time between activities&#10;• Remove the early morning activities on day 2"
                                     ></textarea>
                                     <small class="form-text text-muted mt-1 d-block">
                                         <i class="fas fa-lightbulb me-1"></i>
@@ -1097,13 +1246,18 @@
                                 </div>
                                 
                                 <!-- Action Buttons -->
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-primary btn-lg" onclick="applyModification()" id="applyModBtn" style="flex: 1;">
-                                        <i class="fas fa-magic me-2"></i>Apply Changes with AI
+                                <div class="d-flex gap-3">
+                                    <button class="btn btn-primary btn-lg shadow" onclick="applyModification()" id="applyModBtn" style="flex: 1; font-size: 1.05rem; padding: 14px;">
+                                        <i class="fas fa-magic me-2"></i>🚀 Regenerate Itinerary
                                     </button>
-                                    <button class="btn btn-outline-secondary btn-lg" onclick="cancelModification()" id="cancelModBtn">
+                                    <button class="btn btn-outline-secondary btn-lg" onclick="cancelModification()" id="cancelModBtn" style="min-width: 120px;">
                                         <i class="fas fa-times me-2"></i>Cancel
                                     </button>
+                                </div>
+                                
+                                <div class="alert alert-light mt-3 mb-0" style="font-size: 0.85rem; border-left: 3px solid #0d6efd;">
+                                    <i class="fas fa-info-circle me-2 text-primary"></i>
+                                    <strong>How it works:</strong> The AI will take your current itinerary and modify it based on your request. You don't need to start from scratch!
                                 </div>
                                 
                                 <!-- Loading State -->
@@ -1126,18 +1280,56 @@
                         <i class="fas fa-calendar-alt mb-3" style="font-size: 3rem; color: #ccc;"></i>
                         <p>No itinerary available yet. Generate your trip to see the detailed itinerary here.</p>
                     </div>
-                    <!-- Itinerary content will be inserted here -->
+                    
+                    <!-- Itinerary content container -->
+                    <div id="itineraryContent"></div>
                     
                     <!-- Show Modify Button - Moved AFTER itinerary content -->
-                    <div class="mb-4 mt-4 text-center" id="modifyBtnContainer" style="display: none;">
-                        <button class="btn btn-lg btn-primary shadow-lg" onclick="showModifyItinerary()" id="showModifyBtn" style="border-width: 2px; padding: 15px 40px;">
-                            <i class="fas fa-edit me-2"></i>✨ Modify This Itinerary
+                    <div class="mb-4 mt-5 text-center" id="modifyBtnContainer" style="display: none;">
+                        <div class="alert alert-success shadow-sm mb-3" style="max-width: 600px; margin: 0 auto; border-left: 4px solid #28a745;">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Itinerary Generated Successfully!</strong>
+                            <p class="mb-0 mt-1" style="font-size: 0.9rem;">
+                                Want to make changes? Click below to modify your trip using AI
+                            </p>
+                        </div>
+                        <button class="btn btn-lg btn-primary shadow-lg pulse-button" onclick="showModifyItinerary()" id="showModifyBtn" style="border-width: 2px; padding: 15px 40px; font-size: 1.1rem;">
+                            <i class="fas fa-magic me-2"></i>✨ Modify This Itinerary with AI
                         </button>
-                        <p class="text-muted mt-2 mb-0" style="font-size: 0.9rem;">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Make changes to your trip plan using AI
+                        <p class="text-muted mt-3 mb-0" style="font-size: 0.95rem;">
+                            <i class="fas fa-lightbulb me-1 text-warning"></i>
+                            <strong>Examples:</strong> Swap days • Add activities • Change plans • Make it more relaxed
                         </p>
                     </div>
+                    
+                    <!-- Download PDF Button at Bottom -->
+                    <div class="mb-4 mt-4 text-center" id="downloadBtnContainer" style="display: none;">
+                        <button class="btn btn-lg btn-outline-danger shadow" onclick="downloadPDF()" id="downloadPdfBtn" style="border-width: 2px; padding: 15px 40px; font-size: 1.05rem;">
+                            <i class="fas fa-file-pdf me-2"></i>📄 Download PDF Itinerary
+                        </button>
+                        <p class="text-muted mt-2 mb-0" style="font-size: 0.85rem;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Download a beautifully formatted PDF of your complete trip plan
+                        </p>
+                    </div>
+                    
+                    <style>
+                        @keyframes pulse {
+                            0% {
+                                box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+                            }
+                            50% {
+                                box-shadow: 0 6px 20px rgba(13, 110, 253, 0.5);
+                            }
+                            100% {
+                                box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+                            }
+                        }
+                        
+                        .pulse-button {
+                            animation: pulse 2s ease-in-out infinite;
+                        }
+                    </style>
                 </div>
                 
                 <div id="flights" class="tab-pane">

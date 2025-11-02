@@ -265,3 +265,97 @@ def extract_image_urls_from_data(hotels_info: str, sights_info: str) -> dict:
 
     print(f"🖼️  [EXTRACT-IMAGES] Total valid images extracted: {len(image_urls)}")
     return image_urls
+
+
+# Modification prompt
+ITINERARY_MODIFY_PROMPT = """
+You are a professional travel planner helping modify an existing itinerary based on user feedback.
+
+Here is the CURRENT ITINERARY:
+---
+{itinerary_content}
+---
+
+USER'S MODIFICATION REQUEST:
+{modification_feedback}
+
+IMPORTANT INSTRUCTIONS:
+1. MODIFY the existing itinerary based on the user's request
+2. DO NOT regenerate from scratch - keep all the existing details, hotels, flights, and structure
+3. ONLY make the specific changes requested by the user
+4. Preserve all formatting, images, times, prices, and other details that aren't being changed
+5. If swapping days, exchange the complete day activities while keeping day numbers correct
+6. If adding activities, integrate them naturally into the existing schedule
+7. If removing activities, adjust timing for remaining activities smoothly
+8. Maintain the same markdown formatting and structure
+9. Keep all image links intact
+10. Respond in {language}
+
+Please provide the MODIFIED ITINERARY in markdown format:
+"""
+
+
+def modify_itinerary_content(
+    itinerary_content: str,
+    modification_feedback: str,
+    language: str = "english"
+) -> str:
+    """
+    Modify an existing itinerary based on user feedback using Google Gemini.
+    
+    Args:
+        itinerary_content: The previously generated itinerary (markdown)
+        modification_feedback: Natural language modification request
+        language: Language for the response
+    
+    Returns:
+        Modified itinerary in markdown format
+    """
+    print("🔄 [MODIFY-ITINERARY] Starting itinerary modification with Gemini...")
+    print(f"📝 [MODIFY-ITINERARY] Original itinerary length: {len(itinerary_content)} chars")
+    print(f"💬 [MODIFY-ITINERARY] Modification request: {modification_feedback}")
+    
+    try:
+        # Configure Gemini
+        api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+        if not api_key:
+            raise ValueError("GOOGLE_API_KEY not found in environment variables")
+        
+        genai.configure(api_key=api_key)
+        
+        # Use Gemini 1.5 Flash for faster modifications
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        
+        # Prepare the prompt
+        prompt = ITINERARY_MODIFY_PROMPT.format(
+            itinerary_content=itinerary_content,
+            modification_feedback=modification_feedback,
+            language=language
+        )
+        
+        print("🚀 [MODIFY-ITINERARY] Sending modification request to Gemini...")
+        
+        # Generate modified itinerary
+        response = model.generate_content(
+            prompt,
+            generation_config={
+                "temperature": 0.7,
+                "top_p": 0.95,
+                "top_k": 40,
+                "max_output_tokens": 8192,
+            }
+        )
+        
+        if not response or not response.text:
+            raise ValueError("Empty response from Gemini")
+        
+        modified_itinerary = response.text.strip()
+        
+        print(f"✅ [MODIFY-ITINERARY] Modification complete! New length: {len(modified_itinerary)} chars")
+        print(f"📊 [MODIFY-ITINERARY] Length change: {len(modified_itinerary) - len(itinerary_content):+d} chars")
+        
+        return modified_itinerary
+        
+    except Exception as e:
+        print(f"❌ [MODIFY-ITINERARY] Error: {e}")
+        raise Exception(f"Failed to modify itinerary: {str(e)}")

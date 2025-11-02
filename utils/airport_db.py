@@ -617,7 +617,7 @@ def get_popular_international_airports():
 
 
 def get_popular_indian_airports():
-    """Get list of popular Indian tourist destination airports"""
+    """Get list of popular Indian tourist destination airports - includes cities mapped to nearest airports"""
     return [
         # Major metropolitan airports
         ("DEL", "Indira Gandhi International Airport", "New Delhi", "India", "IN", 28.5566, 77.1000, "Asia/Kolkata"),
@@ -626,67 +626,114 @@ def get_popular_indian_airports():
         ("MAA", "Chennai International Airport", "Chennai", "India", "IN", 12.9944, 80.1806, "Asia/Kolkata"),
         ("HYD", "Rajiv Gandhi International Airport", "Hyderabad", "India", "IN", 17.2403, 78.4294, "Asia/Kolkata"),
         ("CCU", "Netaji Subhash Chandra Bose International Airport", "Kolkata", "India", "IN", 22.6547, 88.4467, "Asia/Kolkata"),
+        ("PNQ", "Pune Airport", "Pune", "India", "IN", 18.5822, 73.9197, "Asia/Kolkata"),
         
-        # Popular tourist destinations
-        ("GOI", "Dabolim Airport", "Goa", "India", "IN", 15.3808, 73.8314, "Asia/Kolkata"),
+        # Punjab & Haryana region (city aliases handled separately)
         ("IXC", "Chandigarh Airport", "Chandigarh", "India", "IN", 30.6735, 76.7885, "Asia/Kolkata"),
+        ("ATQ", "Sri Guru Ram Dass Jee International Airport", "Amritsar", "India", "IN", 31.7096, 74.7973, "Asia/Kolkata"),
+        ("LUH", "Ludhiana Airport", "Ludhiana", "India", "IN", 30.8547, 75.9523, "Asia/Kolkata"),
+        ("PGH", "Sahnewal Airport", "Patiala", "India", "IN", 30.6695, 76.6797, "Asia/Kolkata"),
+        
+        # Popular tourist destinations - Goa (city aliases handled separately)
+        ("GOI", "Dabolim Airport", "Goa", "India", "IN", 15.3808, 73.8314, "Asia/Kolkata"),
+        
+        # Rajasthan - heritage destinations (city aliases handled separately)
         ("JAI", "Jaipur International Airport", "Jaipur", "India", "IN", 26.8242, 75.8017, "Asia/Kolkata"),
         ("UDR", "Maharana Pratap Airport", "Udaipur", "India", "IN", 24.6177, 73.8961, "Asia/Kolkata"),
         ("JDH", "Jodhpur Airport", "Jodhpur", "India", "IN", 26.2511, 73.0489, "Asia/Kolkata"),
-        ("IDR", "Devi Ahilya Bai Holkar Airport", "Indore", "India", "IN", 22.7218, 75.8011, "Asia/Kolkata"),
-        
-        # Kerala - popular tourist state
-        ("COK", "Cochin International Airport", "Kochi", "India", "IN", 9.9312, 76.2673, "Asia/Kolkata"),
-        ("TRV", "Trivandrum International Airport", "Thiruvananthapuram", "India", "IN", 8.4821, 76.9200, "Asia/Kolkata"),
-        ("CCJ", "Calicut International Airport", "Kozhikode", "India", "IN", 11.1368, 75.9553, "Asia/Kolkata"),
-        
-        # Tamil Nadu - temples and beaches
-        ("CJB", "Coimbatore International Airport", "Coimbatore", "India", "IN", 11.0290, 77.0434, "Asia/Kolkata"),
-        ("IXM", "Madurai Airport", "Madurai", "India", "IN", 9.8345, 78.0934, "Asia/Kolkata"),
-        ("IXZ", "Veer Savarkar International Airport", "Port Blair", "India", "IN", 11.6412, 92.7297, "Asia/Kolkata"),
-        
-        # Rajasthan - heritage destinations (continued)
         ("BKB", "Nal Airport", "Bikaner", "India", "IN", 28.0706, 73.2072, "Asia/Kolkata"),
+        ("JSA", "Jaisalmer Airport", "Jaisalmer", "India", "IN", 26.8887, 70.8650, "Asia/Kolkata"),
         
         # Gujarat - business and tourism
         ("AMD", "Sardar Vallabhbhai Patel International Airport", "Ahmedabad", "India", "IN", 23.0772, 72.6347, "Asia/Kolkata"),
         ("BDQ", "Vadodara Airport", "Vadodara", "India", "IN", 22.3362, 73.2263, "Asia/Kolkata"),
+        ("STV", "Surat Airport", "Surat", "India", "IN", 21.1140, 72.7419, "Asia/Kolkata"),
+        ("RAJ", "Rajkot Airport", "Rajkot", "India", "IN", 22.3092, 70.7795, "Asia/Kolkata"),
+        ("BHJ", "Bhuj Airport", "Bhuj", "India", "IN", 23.2878, 69.6702, "Asia/Kolkata"),
         ("IXY", "Kandla Airport", "Kandla", "India", "IN", 23.1127, 70.1003, "Asia/Kolkata"),
+        ("PBD", "Porbandar Airport", "Porbandar", "India", "IN", 21.6487, 69.6572, "Asia/Kolkata"),
         
-        # West Bengal - cultural destinations (Kolkata already listed above)
+        # Kerala - popular tourist state (city aliases handled separately)
+        ("COK", "Cochin International Airport", "Kochi", "India", "IN", 9.9312, 76.2673, "Asia/Kolkata"),
+        ("TRV", "Trivandrum International Airport", "Thiruvananthapuram", "India", "IN", 8.4821, 76.9200, "Asia/Kolkata"),
+        ("CCJ", "Calicut International Airport", "Kozhikode", "India", "IN", 11.1368, 75.9553, "Asia/Kolkata"),
+        ("CNN", "Kannur International Airport", "Kannur", "India", "IN", 11.9186, 75.5472, "Asia/Kolkata"),
+        
+        # Tamil Nadu - temples and beaches (city aliases handled separately)
+        ("CJB", "Coimbatore International Airport", "Coimbatore", "India", "IN", 11.0290, 77.0434, "Asia/Kolkata"),
+        ("IXM", "Madurai Airport", "Madurai", "India", "IN", 9.8345, 78.0934, "Asia/Kolkata"),
+        ("TRZ", "Tiruchirapalli International Airport", "Trichy", "India", "IN", 10.7654, 78.7097, "Asia/Kolkata"),
+        ("PNY", "Puducherry Airport", "Puducherry", "India", "IN", 11.9680, 79.8120, "Asia/Kolkata"),
+        ("TUY", "Thoothukudi Airport", "Tuticorin", "India", "IN", 8.7244, 78.0250, "Asia/Kolkata"),
+        
+        # Andaman & Nicobar
+        ("IXZ", "Veer Savarkar International Airport", "Port Blair", "India", "IN", 11.6412, 92.7297, "Asia/Kolkata"),
+        
+        # West Bengal - cultural destinations (Kolkata already listed above, city aliases handled separately)
         ("IXB", "Bagdogra Airport", "Bagdogra", "India", "IN", 26.6812, 88.3286, "Asia/Kolkata"),
+        ("RDP", "Durgapur Airport", "Durgapur", "India", "IN", 23.6225, 87.2430, "Asia/Kolkata"),
         
-        # Himachal Pradesh - hill stations
+        # Himachal Pradesh - hill stations (city aliases handled separately)
         ("IXJ", "Jammu Airport", "Jammu", "India", "IN", 32.6892, 74.8374, "Asia/Kolkata"),
         ("KUU", "Kullu Manali Airport", "Kullu", "India", "IN", 31.8769, 77.1544, "Asia/Kolkata"),
+        ("SLV", "Shimla Airport", "Shimla", "India", "IN", 31.0818, 77.0681, "Asia/Kolkata"),
+        ("DHM", "Gaggal Airport", "Dharamshala", "India", "IN", 32.1651, 76.2634, "Asia/Kolkata"),
+        ("SXR", "Sheikh ul-Alam Airport", "Srinagar", "India", "IN", 33.9871, 74.7742, "Asia/Kolkata"),
+        ("IXL", "Leh Kushok Bakula Rimpochee Airport", "Leh", "India", "IN", 34.1359, 77.5465, "Asia/Kolkata"),
         
-        # Uttarakhand - spiritual and adventure tourism
-        ("DED", "Dehradun Airport", "Dehradun", "India", "IN", 30.1897, 78.1803, "Asia/Kolkata"),
+        # Uttarakhand - spiritual and adventure tourism (city aliases handled separately)
+        ("DED", "Jolly Grant Airport", "Dehradun", "India", "IN", 30.1897, 78.1803, "Asia/Kolkata"),
+        ("PGH", "Pantnagar Airport", "Pantnagar", "India", "IN", 29.0334, 79.4737, "Asia/Kolkata"),
         
-        # Punjab - Golden Temple
-        ("ATQ", "Sri Guru Ram Dass Jee International Airport", "Amritsar", "India", "IN", 31.7096, 74.7973, "Asia/Kolkata"),
+        # Madhya Pradesh - heritage sites (city aliases handled separately)
+        ("IDR", "Devi Ahilya Bai Holkar Airport", "Indore", "India", "IN", 22.7218, 75.8011, "Asia/Kolkata"),
+        ("BHO", "Raja Bhoj Airport", "Bhopal", "India", "IN", 23.2877, 77.3376, "Asia/Kolkata"),
+        ("JLR", "Jabalpur Airport", "Jabalpur", "India", "IN", 23.1778, 80.0520, "Asia/Kolkata"),
+        ("GWL", "Gwalior Airport", "Gwalior", "India", "IN", 26.2933, 78.2278, "Asia/Kolkata"),
+        ("HBX", "Khajuraho Airport", "Khajuraho", "India", "IN", 24.8172, 79.9186, "Asia/Kolkata"),
         
-        # Uttar Pradesh - Taj Mahal and spiritual sites
+        # Chhattisgarh
+        ("RPR", "Swami Vivekananda Airport", "Raipur", "India", "IN", 21.1804, 81.7388, "Asia/Kolkata"),
+        
+        # Uttar Pradesh - Taj Mahal and spiritual sites (city aliases handled separately)
         ("AGR", "Agra Airport", "Agra", "India", "IN", 27.1558, 77.9608, "Asia/Kolkata"),
         ("VNS", "Lal Bahadur Shastri Airport", "Varanasi", "India", "IN", 25.4484, 82.8592, "Asia/Kolkata"),
         ("LKO", "Chaudhary Charan Singh International Airport", "Lucknow", "India", "IN", 26.7606, 80.8893, "Asia/Kolkata"),
+        ("IXD", "Allahabad Airport", "Allahabad", "India", "IN", 25.4405, 81.7339, "Asia/Kolkata"),
+        ("KNU", "Kanpur Airport", "Kanpur", "India", "IN", 26.4041, 80.3641, "Asia/Kolkata"),
         
-        # Odisha - temples and beaches
+        # Odisha - temples and beaches (city aliases handled separately)
         ("BBI", "Biju Patnaik International Airport", "Bhubaneswar", "India", "IN", 20.2444, 85.8178, "Asia/Kolkata"),
         
-        # Assam - wildlife and tea gardens
+        # Assam - wildlife and tea gardens (city aliases handled separately)
         ("GAU", "Lokpriya Gopinath Bordoloi International Airport", "Guwahati", "India", "IN", 26.1061, 91.5859, "Asia/Kolkata"),
+        ("DIB", "Dibrugarh Airport", "Dibrugarh", "India", "IN", 27.4839, 95.0169, "Asia/Kolkata"),
+        ("IXS", "Silchar Airport", "Silchar", "India", "IN", 24.9129, 92.9787, "Asia/Kolkata"),
         
-        # Madhya Pradesh - heritage sites (Indore already listed above)
-        ("RPR", "Swami Vivekananda Airport", "Raipur", "India", "IN", 21.1804, 81.7388, "Asia/Kolkata"),
+        # Northeast states
+        ("IMF", "Imphal Airport", "Imphal", "India", "IN", 24.7600, 93.8967, "Asia/Kolkata"),
+        ("AJL", "Lengpui Airport", "Aizawl", "India", "IN", 23.8406, 92.6197, "Asia/Kolkata"),
+        ("AGX", "Agartala Airport", "Agartala", "India", "IN", 23.8869, 91.2404, "Asia/Kolkata"),
         
-        # Andhra Pradesh - temples
+        # Andhra Pradesh & Telangana - temples
         ("VGA", "Vijayawada Airport", "Vijayawada", "India", "IN", 16.5304, 80.7968, "Asia/Kolkata"),
         ("TIR", "Tirupati Airport", "Tirupati", "India", "IN", 13.6325, 79.5433, "Asia/Kolkata"),
+        ("VTZ", "Visakhapatnam Airport", "Visakhapatnam", "India", "IN", 17.7211, 83.2245, "Asia/Kolkata"),
+        ("VTZ", "Visakhapatnam Airport", "Vizag", "India", "IN", 17.7211, 83.2245, "Asia/Kolkata"),
+        ("RJA", "Rajahmundry Airport", "Rajahmundry", "India", "IN", 17.1104, 81.8182, "Asia/Kolkata"),
         
-        # Sikkim - mountain tourism (Bagdogra already listed above)
+        # Karnataka - tech and heritage (city aliases handled separately)
+        ("IXG", "Belgaum Airport", "Belgaum", "India", "IN", 15.8593, 74.6183, "Asia/Kolkata"),
+        ("MYQ", "Mysore Airport", "Mysore", "India", "IN", 12.2300, 76.6558, "Asia/Kolkata"),
+        ("IXE", "Mangalore International Airport", "Mangalore", "India", "IN", 12.9612, 74.8900, "Asia/Kolkata"),
+        ("VGA", "Hubli Airport", "Hubli", "India", "IN", 15.3617, 75.0849, "Asia/Kolkata"),
         
-        # Andaman & Nicobar (Port Blair already listed above)
+        # Bihar - spiritual tourism (city aliases handled separately)
+        ("PAT", "Jay Prakash Narayan Airport", "Patna", "India", "IN", 25.5913, 85.0880, "Asia/Kolkata"),
+        ("GAY", "Gaya Airport", "Gaya", "India", "IN", 24.7473, 84.9512, "Asia/Kolkata"),
+        
+        # Jharkhand
+        ("IXR", "Birsa Munda Airport", "Ranchi", "India", "IN", 23.3144, 85.3217, "Asia/Kolkata"),
     ]
 
 
@@ -856,8 +903,93 @@ def ensure_popular_airports():
     return added_count, total_count, india_count
 
 
+def get_city_aliases():
+    """Map city names to their nearest airport codes"""
+    return {
+        # Punjab & Haryana region - all use Chandigarh (IXC)
+        'ambala': 'IXC',
+        'panchkula': 'IXC',
+        'mohali': 'IXC',
+        'zirakpur': 'IXC',
+        
+        # Rajasthan
+        'ajmer': 'JAI',
+        'pushkar': 'JAI',
+        'mount abu': 'UDR',
+        
+        # Kerala hill stations
+        'munnar': 'COK',
+        'thekkady': 'COK',
+        'alleppey': 'COK',
+        'alappuzha': 'COK',
+        'ernakulam': 'COK',
+        'kovalam': 'TRV',
+        'varkala': 'TRV',
+        
+        # Tamil Nadu
+        'ooty': 'CJB',
+        'ootacamund': 'CJB',
+        'udhagamandalam': 'CJB',
+        'kodaikanal': 'CJB',
+        'mahabalipuram': 'MAA',
+        'pondicherry': 'MAA',
+        'thanjavur': 'TRZ',
+        'rameshwaram': 'IXM',
+        
+        # Uttarakhand
+        'mussoorie': 'DED',
+        'rishikesh': 'DED',
+        'haridwar': 'DED',
+        'nainital': 'PGH',
+        
+        # Himachal Pradesh
+        'manali': 'KUU',
+        'mcleod ganj': 'DHM',
+        'dalhousie': 'DHM',
+        
+        # West Bengal & Sikkim
+        'darjeeling': 'IXB',
+        'gangtok': 'IXB',
+        'kalimpong': 'IXB',
+        'siliguri': 'IXB',
+        
+        # Uttar Pradesh
+        'mathura': 'DEL',
+        'vrindavan': 'DEL',
+        'fatehpur sikri': 'AGR',
+        'benares': 'VNS',
+        'prayagraj': 'IXD',
+        
+        # Odisha
+        'puri': 'BBI',
+        'konark': 'BBI',
+        
+        # Goa
+        'panaji': 'GOI',
+        'margao': 'GOI',
+        'panjim': 'GOI',
+        
+        # Assam & Northeast
+        'shillong': 'GAU',
+        'kaziranga': 'GAU',
+        
+        # Madhya Pradesh
+        'ujjain': 'IDR',
+        'mandu': 'IDR',
+        
+        # Karnataka
+        'hampi': 'BLR',
+        'coorg': 'IXE',
+        'madikeri': 'IXE',
+        
+        # Bihar
+        'bodhgaya': 'GAY',
+        'bodh gaya': 'GAY',
+    }
+
+
 def get_airports(search_term: Optional[str] = None, limit: int = 500) -> List[Dict]:
-    """Get airports from database with optional search - prioritizes Indian airports"""
+    """Get airports from database with optional search - prioritizes Indian airports and handles city aliases"""
     init_database()
     
     conn = sqlite3.connect(DB_PATH)
@@ -867,7 +999,98 @@ def get_airports(search_term: Optional[str] = None, limit: int = 500) -> List[Di
     if search_term:
         # Case-insensitive search with improved matching
         search_term_upper = search_term.upper().strip()
+        search_term_lower = search_term.lower().strip()
         search_pattern = f"%{search_term_upper}%"
+        
+        # Check city aliases with exact and partial matching
+        city_aliases = get_city_aliases()
+        
+        # Strategy 1: Exact alias match
+        if search_term_lower in city_aliases:
+            airport_code = city_aliases[search_term_lower]
+            print(f"🔍 [AIRPORT-DB] Found exact city alias: '{search_term}' → {airport_code}")
+            cursor.execute("""
+                SELECT code, name, city, country, country_code
+                FROM airports
+                WHERE code = ?
+                LIMIT 1
+            """, (airport_code,))
+            row = cursor.fetchone()
+            if row:
+                result = dict(row)
+                result['name'] = f"{result['name']} (nearest to {search_term})"
+                conn.close()
+                return [result]
+        
+        # Strategy 2: Fuzzy alias match (for typos like "amala" → "ambala", "munar" → "munnar")
+        # First, apply common typo corrections
+        typo_corrections = {
+            'i': 'y',  # ooti → ooty
+            'y': 'i',
+            'ei': 'ee',
+            'ee': 'ei',
+        }
+        search_variants = [search_term_lower]
+        # Create variants with common typo fixes
+        for old, new in typo_corrections.items():
+            if old in search_term_lower:
+                variant = search_term_lower.replace(old, new)
+                search_variants.append(variant)
+        
+        # Use simple edit distance / character similarity
+        if len(search_term_lower) >= 3:
+            best_match = None
+            best_score = 0
+            
+            for alias_city, airport_code in city_aliases.items():
+                # Quick filter: must be within reasonable length difference
+                len_diff = abs(len(search_term_lower) - len(alias_city))
+                # Be more lenient for very short names (4 chars or less)
+                max_len_diff = 1 if min(len(search_term_lower), len(alias_city)) <= 4 else 2
+                if len_diff > max_len_diff:
+                    continue
+                
+                # Calculate similarity using common character ratio
+                # Check if any search variant matches exactly
+                if alias_city in search_variants:
+                    similarity = 1.0  # Perfect match via typo correction
+                # Check if search term is substring
+                elif search_term_lower in alias_city or alias_city in search_term_lower:
+                    similarity = 0.9  # High score for substring matches
+                else:
+                    # Calculate character overlap
+                    search_chars = set(search_term_lower)
+                    alias_chars = set(alias_city)
+                    common_chars = search_chars & alias_chars
+                    total_chars = search_chars | alias_chars
+                    similarity = len(common_chars) / len(total_chars) if total_chars else 0
+                
+                # Bonus for matching prefix (first 3 characters)
+                if len(search_term_lower) >= 3 and len(alias_city) >= 3:
+                    if search_term_lower[:3] == alias_city[:3]:
+                        similarity += 0.2
+                
+                # Track best match
+                if similarity > best_score and similarity >= 0.75:  # 75% threshold
+                    best_score = similarity
+                    best_match = (alias_city, airport_code)
+            
+            # If we found a good fuzzy match, use it
+            if best_match:
+                alias_city, airport_code = best_match
+                print(f"🔍 [AIRPORT-DB] Found fuzzy city alias match: '{search_term}' ≈ '{alias_city}' (similarity: {best_score:.2f}) → {airport_code}")
+                cursor.execute("""
+                    SELECT code, name, city, country, country_code
+                    FROM airports
+                    WHERE code = ?
+                    LIMIT 1
+                """, (airport_code,))
+                row = cursor.fetchone()
+                if row:
+                    result = dict(row)
+                    result['name'] = f"{result['name']} (nearest to {alias_city})"
+                    conn.close()
+                    return [result]
         
         # Get popular Indian airport codes for prioritization
         popular_indian = get_popular_indian_airports()
